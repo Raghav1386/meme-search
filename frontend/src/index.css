@@ -1,0 +1,280 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html {
+  scroll-behavior: smooth;
+}
+
+:root {
+  --bg-base: #070709;
+  --surface-1: #111116;
+  --surface-2: #1a1a24;
+  --border-dim: #22222f;
+  --text-main: #f4f4f5;
+  --text-muted: #8a8a98;
+  --accent: #ff4a1c;
+  --accent-glow: rgba(255, 74, 28, 0.4);
+  --gpu-accelerate: translate3d(0, 0, 0);
+  --smooth-transition: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Typography & Resets */
+body {
+  font-family: 'Inter', sans-serif;
+  font-size: clamp(1rem, 1.2vw, 1.125rem);
+  line-height: 1.6;
+  background-color: var(--bg-base);
+  color: var(--text-main);
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+.font-display {
+  font-family: 'Syne', sans-serif;
+  letter-spacing: -0.04em;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+}
+
+.font-mono {
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* Hide Scrollbar */
+::-webkit-scrollbar {
+  display: none;
+}
+
+* {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Complex Button Styles (Cut Corners + Hover FX) */
+.btn-cyber {
+  clip-path: polygon(0 0, calc(100% - 1rem) 0, 100% 1rem, 100% 100%, 1rem 100%, 0 calc(100% - 1rem));
+  position: relative;
+  isolation: isolate;
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.btn-cyber::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--accent);
+  z-index: -2;
+}
+
+.btn-cyber::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+  transform: skewX(-20deg);
+  z-index: -1;
+  transition: left 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.btn-cyber:hover {
+  transform: translateY(-0.125rem) scale(1.02);
+  filter: drop-shadow(0 0 1rem var(--accent-glow));
+}
+
+.btn-cyber:hover::after {
+  left: 200%;
+  transition: left 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.btn-cyber-ghost {
+  background: transparent;
+  border: 1px solid var(--border-dim);
+  clip-path: polygon(1rem 0, 100% 0, 100% calc(100% - 1rem), calc(100% - 1rem) 100%, 0 100%, 0 1rem);
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.btn-cyber-ghost::before {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 0%;
+  background: var(--surface-2);
+  z-index: -1;
+  transition: height 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.btn-cyber-ghost:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.btn-cyber-ghost:hover::before {
+  height: 100%;
+}
+
+/* Niche Accoutrements & Micro-Interactions */
+.accoutrement-bracket::before {
+  content: '[';
+  margin-right: 0.5rem;
+  color: var(--accent);
+  opacity: 0.6;
+}
+
+.accoutrement-bracket::after {
+  content: ']';
+  margin-left: 0.5rem;
+  color: var(--accent);
+  opacity: 0.6;
+}
+
+.accoutrement-coord {
+  position: absolute;
+  font-size: 0.8rem;
+  color: var(--border-dim);
+  font-family: 'JetBrains Mono', monospace;
+  pointer-events: none;
+}
+
+.hover-reveal-grid {
+  background-image: radial-gradient(var(--border-dim) 1px, transparent 1px);
+  background-size: 1.5rem 1.5rem;
+  background-position: center;
+}
+
+/* Reveal Animations */
+.reveal {
+  opacity: 0;
+  transform: translateY(2rem) scale(0.98);
+  filter: blur(4px);
+  transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.reveal.active {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  filter: blur(0);
+  will-change: transform, opacity, filter;
+  backface-visibility: hidden;
+}
+
+.delay-100 {
+  transition-delay: 100ms;
+}
+
+.delay-200 {
+  transition-delay: 200ms;
+}
+
+.delay-300 {
+  transition-delay: 300ms;
+}
+
+/* Custom Keyframes */
+@keyframes scanline {
+  0% {
+    transform: translateY(-100%);
+  }
+
+  100% {
+    transform: translateY(1000%);
+  }
+}
+
+.animate-scanline {
+  animation: scanline 4s linear infinite;
+}
+
+@keyframes marquee {
+  0% {
+    transform: translateX(0);
+  }
+
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-marquee {
+  display: flex;
+  width: 200%;
+  animation: marquee 30s linear infinite;
+  will-change: transform;
+  backface-visibility: hidden;
+}
+
+@keyframes pulse-node {
+
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.5;
+    box-shadow: 0 0 0 0 var(--accent-glow);
+  }
+
+  50% {
+    transform: scale(1.5);
+    opacity: 1;
+    box-shadow: 0 0 0.5rem 0.2rem var(--accent-glow);
+  }
+}
+
+.animate-node {
+  animation: pulse-node 2s infinite;
+}
+
+/* UI Dashboard specific styles */
+.dashboard-panel {
+  background: linear-gradient(145deg, var(--surface-1), var(--bg-base));
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.05), 0 2rem 4rem -1rem rgba(0, 0, 0, 0.8);
+}
+
+.data-bar {
+  transform-origin: left;
+  animation: growBar 1.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes growBar {
+  from {
+    transform: scaleX(0);
+  }
+
+  to {
+    transform: scaleX(1);
+  }
+}
+
+/* Image treatment */
+.high-fi-img {
+  filter: grayscale(100%) contrast(120%) brightness(80%);
+  mix-blend-mode: luminosity;
+  transition: all 0.5s ease;
+}
+
+.group:hover .high-fi-img {
+  filter: grayscale(0%) contrast(100%) brightness(100%);
+  mix-blend-mode: normal;
+}
+
+/* Utility to hide standard scrollbar but keep functionality */
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
