@@ -41,7 +41,7 @@ const TrustStrip = () => (
 );
 
 const NewsletterSection = () => (
-  <section className="py-[clamp(8rem,15vw,12rem)] relative z-10 bg-[#070709] border-t border-[#ff4a1c]/30 flex flex-col items-center justify-center text-center px-4 overflow-hidden">
+  <section className="py-16 md:py-24 lg:py-32 relative z-10 bg-[#070709] border-t border-[#ff4a1c]/30 flex flex-col items-center justify-center text-center px-4 overflow-hidden">
     <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[300px] bg-[#ff4a1c] opacity-[0.08] blur-[100px] pointer-events-none rounded-full"></div>
 
     <div className="reveal max-w-[40rem] w-full relative z-10">
@@ -49,8 +49,8 @@ const NewsletterSection = () => (
         <iconify-icon icon="solar:bolt-bold" width="28"></iconify-icon>
       </div>
 
-      <h2 className="font-display font-[800] text-[clamp(2.5rem,5vw,4rem)] leading-[1] text-[#f4f4f5] mb-6">Growth doesn't wait.</h2>
-      <p className="text-[#8a8a98] mb-12 text-[clamp(1rem,1.2vw,1.125rem)] font-medium">Get the briefing every Thursday. What dropped, why it matters, how to architect it. Join 42,000 operators who build the future.</p>
+      <h2 className="font-display font-[800] text-3xl md:text-5xl lg:text-6xl leading-[1] text-[#f4f4f5] mb-6">Growth doesn't wait.</h2>
+      <p className="text-[#8a8a98] mb-12 text-base md:text-lg font-medium">Get the briefing every Thursday. What dropped, why it matters, how to architect it. Join 42,000 operators who build the future.</p>
 
       <form className="flex flex-col sm:flex-row gap-0 w-full mb-8 relative group" onSubmit={(e) => e.preventDefault()}>
         <div className="flex-1 relative border border-[#22222f] bg-[#0a0a0d] p-1 group-focus-within:border-[#ff4a1c]/60 transition-colors flex items-center" style={{ clipPath: 'polygon(0 0, 100% 0, 100% calc(100% - 1rem), calc(100% - 1rem) 100%, 0 100%)' }}>
@@ -88,6 +88,10 @@ function AppContent() {
 
   const handleLogin = (userData) => {
     setUser(userData);
+    const pendingSearch = localStorage.getItem('pending_search_query');
+    if (pendingSearch) {
+      addToHistory(pendingSearch);
+    }
   };
 
   const handleLogout = () => {
@@ -142,7 +146,7 @@ function AppContent() {
 
       {/* Navigation */}
       <nav className="fixed top-0 w-full z-50 bg-[#070709]/70 backdrop-blur-xl border-b border-[#22222f]/50">
-        <div className="mx-auto w-[clamp(20rem,92vw,80rem)] flex items-center justify-between h-[4.5rem]">
+        <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 flex items-center justify-between h-[4.5rem]">
 
           {/* Logo */}
           <div className="flex items-center gap-6">
@@ -213,7 +217,7 @@ function AppContent() {
       />
 
       <Routes>
-        <Route path="/" element={<Home waveformHeights={waveformHeights} onSearch={addToHistory} history={searchHistory} />} />
+        <Route path="/" element={<Home waveformHeights={waveformHeights} onSearch={addToHistory} history={searchHistory} user={user} />} />
         <Route path="/results" element={<MemeResult />} />
         <Route path="/login" element={<Login onLogin={handleLogin} />} />
       </Routes>
@@ -229,7 +233,7 @@ function AppContent() {
       {/* FOOTER - ONLY ON LANDING PAGE */}
       {location.pathname === '/' && (
         <footer className="bg-[#070709] pt-16 pb-8 border-t border-[#22222f] relative z-10 font-mono text-xs">
-          <div className="mx-auto w-[clamp(20rem,92vw,80rem)] grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
+          <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
 
             <div className="col-span-1 md:col-span-2">
               <Link to="/" className="flex items-center gap-2 mb-6 text-[#f4f4f5]">
@@ -270,7 +274,7 @@ function AppContent() {
 
           </div>
 
-          <div className="mx-auto w-[clamp(20rem,92vw,80rem)] flex flex-col md:flex-row justify-between items-center pt-8 border-t border-[#22222f] text-[#22222f] text-sm">
+          <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center pt-8 border-t border-[#22222f] text-[#22222f] text-sm">
             <p>© {new Date().getFullYear()} NEXUS INTELLIGENCE. ALL RIGHTS RESERVED.</p>
             <p>DESIGNED FOR THE BUILDERS.</p>
           </div>

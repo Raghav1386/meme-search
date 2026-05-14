@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-export default function MemeSearch({ onSearch }) {
+export default function MemeSearch({ onSearch, user }) {
   const [searchQuery, setSearchQuery] = useState('');
   const navigate = useNavigate();
 
@@ -9,6 +9,12 @@ export default function MemeSearch({ onSearch }) {
     e.preventDefault();
     if (!searchQuery.trim()) return;
     
+    if (!user) {
+      localStorage.setItem('pending_search_query', searchQuery);
+      navigate('/login');
+      return;
+    }
+
     // Navigating to the results page with the query
     if (onSearch) onSearch(searchQuery);
     navigate(`/results?q=${encodeURIComponent(searchQuery)}`);
@@ -16,8 +22,8 @@ export default function MemeSearch({ onSearch }) {
   };
 
   return (
-    <section className="py-[clamp(4rem,8vw,6rem)] relative z-10 -mt-20">
-      <div className="mx-auto w-[clamp(20rem,92vw,80rem)] relative z-10 flex flex-col items-center">
+    <section className="py-12 md:py-20 relative z-10 -mt-20">
+      <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 relative z-10 flex flex-col items-center">
         
         <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-0 w-full max-w-[64rem] mx-auto relative group mb-12">
           <div className="flex-1 relative border border-[#22222f] bg-[#0a0a0d]/60 backdrop-blur-xl p-2 group-focus-within:border-[#ff4a1c]/60 transition-all duration-500 flex items-center shadow-[0_0_50px_rgba(0,0,0,0.5)]" style={{ clipPath: 'polygon(0 0, 100% 0, 100% calc(100% - 1.5rem), calc(100% - 1.5rem) 100%, 0 100%)' }}>

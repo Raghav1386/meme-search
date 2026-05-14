@@ -41,7 +41,7 @@ export default function MemeResult() {
     <div className="pt-32 pb-20 min-h-screen relative z-10">
       
       {/* HEADER SECTION */}
-      <div className="mx-auto w-[clamp(20rem,92vw,80rem)] mb-12 flex flex-col md:flex-row justify-between items-end gap-6 reveal active">
+      <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 mb-12 flex flex-col md:flex-row justify-between items-end gap-6 reveal active">
         <div>
           <div className="flex items-center gap-3 font-mono text-[0.65rem] text-[#ff4a1c] mb-3 uppercase tracking-widest">
             <span className="w-2 h-2 bg-[#ff4a1c] animate-pulse"></span>
@@ -79,7 +79,7 @@ export default function MemeResult() {
         </div>
       </div>
 
-      <div className="mx-auto w-[clamp(20rem,92vw,80rem)]">
+      <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
         {loading ? (
           <div className="h-64 flex flex-col items-center justify-center gap-6">
             <div className="w-12 h-12 border-2 border-[#ff4a1c] border-t-transparent rounded-full animate-spin"></div>

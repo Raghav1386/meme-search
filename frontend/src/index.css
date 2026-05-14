@@ -4,6 +4,19 @@
 
 html {
   scroll-behavior: smooth;
+  font-size: 108.75%; /* ~17.4px (increased by exactly 1.4px) */
+}
+
+@media (min-width: 768px) {
+  html {
+    font-size: 118.75%; /* ~19.0px on laptops (increased by exactly 1.4px) */
+  }
+}
+
+@media (min-width: 1280px) {
+  html {
+    font-size: 123.75%; /* ~19.8px on large screens (increased by exactly 1.4px) */
+  }
 }
 
 :root {
@@ -22,7 +35,6 @@ html {
 /* Typography & Resets */
 body {
   font-family: 'Inter', sans-serif;
-  font-size: clamp(1rem, 1.2vw, 1.125rem);
   line-height: 1.6;
   background-color: var(--bg-base);
   color: var(--text-main);

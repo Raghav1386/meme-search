@@ -29,7 +29,13 @@ export default function Login({ onLogin }) {
     // Simulate network delay
     setTimeout(() => {
       onLogin(user);
-      navigate('/');
+      const pendingSearch = localStorage.getItem('pending_search_query');
+      if (pendingSearch) {
+        localStorage.removeItem('pending_search_query');
+        navigate(`/results?q=${encodeURIComponent(pendingSearch)}`);
+      } else {
+        navigate('/');
+      }
     }, 1500);
   };
 

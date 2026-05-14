@@ -2,14 +2,14 @@ import React from 'react';
 import MemeSearch from './MemeSearch';
 import Typewriter from './Typewriter';
 
-const Home = ({ waveformHeights, onSearch }) => {
+const Home = ({ waveformHeights, onSearch, user }) => {
   return (
     <>
       {/* 01 / HERO SECTION */}
-      <section className="relative pt-[clamp(4rem,10vw,8rem)] pb-[clamp(3rem,6vw,5rem)] min-h-screen flex flex-col items-start overflow-hidden z-10">
+      <section className="relative pt-24 md:pt-32 pb-16 md:pb-24 min-h-screen flex flex-col items-start overflow-hidden z-10">
         <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-[#ff4a1c]/50 to-transparent opacity-50 animate-scanline"></div>
 
-        <div className="mx-auto w-[clamp(20rem,92vw,80rem)] relative z-10 flex flex-col items-start max-w-[72rem]">
+        <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 relative z-10 flex flex-col items-start">
 
           <div className="reveal active">
             <div className="mb-3 flex items-center gap-4 font-mono text-sm uppercase tracking-[0.2em] text-[#8a8a98]">
@@ -17,7 +17,7 @@ const Home = ({ waveformHeights, onSearch }) => {
               <span>Aggressive Growth • Zero Fluff</span>
             </div>
 
-            <h1 className="font-display font-[800] text-[clamp(3.5rem,7vw,6rem)] leading-[0.95] text-[#f4f4f5] mb-2 drop-shadow-2xl">
+            <h1 className="font-display font-[800] text-5xl md:text-7xl lg:text-8xl leading-[0.95] text-[#f4f4f5] mb-2 drop-shadow-2xl">
               Stop Guessing. <br />
               <span className="block mt-2">
                 <Typewriter 
@@ -27,7 +27,7 @@ const Home = ({ waveformHeights, onSearch }) => {
               </span>
             </h1>
 
-            <p className="text-[#8a8a98] max-w-[38rem] mb-6 text-[clamp(1rem,1.2vw,1.125rem)] leading-relaxed font-medium">
+            <p className="text-[#8a8a98] max-w-[38rem] mb-6 text-base md:text-lg leading-relaxed font-medium">
               The only intelligence stream engineered for operators, builders, and decision-makers. We dissect frontier models, architectures, and market shifts so you can deploy faster than your competition.
             </p>
 
@@ -58,7 +58,7 @@ const Home = ({ waveformHeights, onSearch }) => {
       </section>
 
       {/* 01.5 / ARCHIVE RECON (SEARCH) */}
-      <MemeSearch onSearch={onSearch} />
+      <MemeSearch onSearch={onSearch} user={user} />
     </>
   );
 };

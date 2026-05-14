@@ -22,7 +22,7 @@ export default function Sidebar({ isOpen, onClose, history, onClearHistory, user
             animate={{ x: 0 }}
             exit={{ x: '-100%' }}
             transition={{ type: 'spring', damping: 25, stiffness: 200, mass: 0.8 }}
-            className="fixed top-0 left-0 h-full w-[clamp(18rem,25vw,24rem)] bg-[#0a0a0d] border-r border-[#22222f] z-[101] shadow-[20px_0_50px_rgba(0,0,0,0.5)] flex flex-col will-change-transform"
+            className="fixed top-0 left-0 h-full w-[280px] sm:w-[320px] md:w-[380px] bg-[#0a0a0d] border-r border-[#22222f] z-[101] shadow-[20px_0_50px_rgba(0,0,0,0.5)] flex flex-col will-change-transform"
           >
             {/* Header */}
             <div className="p-6 border-b border-[#22222f] flex items-center justify-between">
