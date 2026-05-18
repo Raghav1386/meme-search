@@ -17,8 +17,8 @@ const TrustStrip = () => (
       <span className="font-mono text-[0.8rem] uppercase tracking-widest text-[#8a8a98]">Tactical Intel Trusted By Operators At</span>
     </div>
 
-    <div className="animate-marquee flex items-center gap-16 md:gap-32 px-8 opacity-40 grayscale hover:grayscale-0 transition-all duration-500">
-      <div className="flex gap-16 md:gap-32 font-display font-[800] text-2xl text-[#f4f4f5]">
+    <div className="animate-marquee flex items-center gap-10 md:gap-32 px-4 md:px-8 opacity-40 grayscale hover:grayscale-0 transition-all duration-500">
+      <div className="flex gap-10 md:gap-32 font-display font-[800] text-xl md:text-2xl text-[#f4f4f5]">
         <span>OPENAI</span>
         <span>ANTHROPIC</span>
         <span>DEEPMIND</span>
@@ -27,7 +27,7 @@ const TrustStrip = () => (
         <span>META</span>
         <span>NVIDIA</span>
       </div>
-      <div className="flex gap-16 md:gap-32 font-display font-[800] text-2xl text-[#f4f4f5]">
+      <div className="flex gap-10 md:gap-32 font-display font-[800] text-xl md:text-2xl text-[#f4f4f5]">
         <span>OPENAI</span>
         <span>ANTHROPIC</span>
         <span>DEEPMIND</span>
@@ -44,7 +44,7 @@ const NewsletterSection = () => (
   <section className="py-16 md:py-24 lg:py-32 relative z-10 bg-[#070709] border-t border-[#ff4a1c]/30 flex flex-col items-center justify-center text-center px-4 overflow-hidden">
     <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[300px] bg-[#ff4a1c] opacity-[0.08] blur-[100px] pointer-events-none rounded-full"></div>
 
-    <div className="reveal max-w-[40rem] w-full relative z-10">
+    <div className="reveal max-w-3xl w-full relative z-10">
       <div className="w-16 h-16 bg-[#111116] border border-[#ff4a1c]/50 rounded-full flex items-center justify-center text-[#ff4a1c] mx-auto mb-8 animate-node">
         <iconify-icon icon="solar:bolt-bold" width="28"></iconify-icon>
       </div>
@@ -76,6 +76,7 @@ function AppContent() {
   const location = useLocation();
   const [user, setUser] = useState(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [searchHistory, setSearchHistory] = useState(() => {
     try {
       const saved = localStorage.getItem('nexus_search_history');
@@ -140,7 +141,7 @@ function AppContent() {
   }, [location.pathname]); // Re-observe on route change
 
   return (
-    <div className="selection:bg-[#ff4a1c] selection:text-white relative bg-[#070709] min-h-screen text-[#f4f4f5] font-sans">
+    <div className="selection:bg-[#ff4a1c] selection:text-white relative bg-[#070709] min-h-screen text-[#f4f4f5] font-sans overflow-x-hidden w-full">
       
       <BackgroundCanvas />
 
@@ -199,10 +200,46 @@ function AppContent() {
           </div>
 
           {/* Mobile Menu */}
-          <button className="md:hidden text-[#f4f4f5]" aria-label="Mobile Menu">
-            <iconify-icon icon="solar:hamburger-menu-linear" width="28" height="28"></iconify-icon>
+          <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="md:hidden text-[#f4f4f5]" aria-label="Mobile Menu">
+            <iconify-icon icon={isMobileMenuOpen ? "solar:close-circle-linear" : "solar:hamburger-menu-linear"} width="28" height="28"></iconify-icon>
           </button>
         </div>
+
+        {/* Mobile Menu Dropdown */}
+        {isMobileMenuOpen && (
+          <div className="md:hidden absolute top-[4.5rem] left-0 w-full bg-[#0a0a0d] border-b border-[#22222f] p-6 flex flex-col gap-6 shadow-2xl">
+            <div className="flex flex-col gap-4 font-mono text-sm uppercase text-[#8a8a98]">
+              <a href="/#intel" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-[#f4f4f5]">Intelligence</a>
+              <a href="/#dashboard" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-[#f4f4f5]">Platform</a>
+              <a href="/#manifesto" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-[#f4f4f5]">Manifesto</a>
+            </div>
+            
+            <div className="h-[1px] bg-[#22222f] w-full"></div>
+            
+            <div className="flex flex-col gap-4">
+              {user ? (
+                <>
+                  <div className="flex flex-col">
+                    <span className="font-mono text-[0.75rem] text-[#ff4a1c] uppercase tracking-widest leading-none mb-1 flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 bg-[#ff4a1c] rounded-full animate-pulse"></span> OPERATOR_ONLINE
+                    </span>
+                    <span className="font-display font-bold text-sm text-[#f4f4f5] uppercase">{user.name || user.username}</span>
+                  </div>
+                  <button onClick={() => { handleLogout(); setIsMobileMenuOpen(false); }} className="btn-cyber-ghost text-center text-[0.65rem] px-4 py-3 uppercase tracking-widest font-mono text-[#8a8a98] hover:text-[#ff4a1c] w-full">
+                    Sign Out
+                  </button>
+                </>
+              ) : (
+                <>
+                  <span className="font-mono text-[0.75rem] text-[#ff4a1c] animate-pulse uppercase tracking-widest flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 bg-[#ff4a1c] rounded-full"></span> Live Network
+                  </span>
+                  <Link onClick={() => setIsMobileMenuOpen(false)} to="/login" className="btn-cyber flex items-center justify-center text-[#f4f4f5] font-semibold text-sm px-6 py-3 uppercase tracking-wide text-center w-full">Join Roster</Link>
+                </>
+              )}
+            </div>
+          </div>
+        )}
       </nav>
 
       <Sidebar 
@@ -218,7 +255,7 @@ function AppContent() {
 
       <Routes>
         <Route path="/" element={<Home waveformHeights={waveformHeights} onSearch={addToHistory} history={searchHistory} user={user} />} />
-        <Route path="/results" element={<MemeResult />} />
+        <Route path="/results" element={<MemeResult user={user} />} />
         <Route path="/login" element={<Login onLogin={handleLogin} />} />
       </Routes>
 
@@ -244,7 +281,7 @@ function AppContent() {
                 </svg>
                 <span className="font-display font-[800] text-lg tracking-tighter uppercase font-bold">NEXUS</span>
               </Link>
-              <p className="text-[#8a8a98] max-w-sm mb-6 leading-relaxed">The only AI intelligence stream engineered for operators, builders, and decision-makers. Execute with absolute clarity.</p>
+              <p className="text-[#8a8a98] max-w-lg mb-6 leading-relaxed">The only AI intelligence stream engineered for operators, builders, and decision-makers. Execute with absolute clarity.</p>
               <div className="flex gap-4">
                 <a href="#" className="w-8 h-8 rounded border border-[#22222f] flex items-center justify-center text-[#8a8a98] hover:text-[#ff4a1c] hover:border-[#ff4a1c] transition-colors"><iconify-icon icon="solar:twitter-linear"></iconify-icon></a>
                 <a href="#" className="w-8 h-8 rounded border border-[#22222f] flex items-center justify-center text-[#8a8a98] hover:text-[#ff4a1c] hover:border-[#ff4a1c] transition-colors"><iconify-icon icon="solar:play-circle-linear"></iconify-icon></a>

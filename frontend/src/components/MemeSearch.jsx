@@ -37,7 +37,7 @@ export default function MemeSearch({ onSearch, user }) {
             />
           </div>
 
-          <button type="submit" className="btn-cyber w-full sm:w-auto mt-4 sm:mt-0 sm:-ml-6 h-[5.5rem] md:h-[7.5rem] px-16 text-lg font-[900] text-white uppercase tracking-[0.2em] shrink-0 border-l border-[#22222f]/50 flex items-center justify-center hover:shadow-[0_0_30px_rgba(255,74,28,0.5)] transition-all duration-300">
+          <button type="submit" className="btn-cyber w-full sm:w-auto mt-4 sm:mt-0 sm:-ml-6 h-[4.5rem] sm:h-[5.5rem] md:h-[7.5rem] px-8 sm:px-16 text-base sm:text-lg font-[900] text-white uppercase tracking-[0.2em] shrink-0 border-l border-[#22222f]/50 flex items-center justify-center hover:shadow-[0_0_30px_rgba(255,74,28,0.5)] transition-all duration-300">
             Initiate
           </button>
         </form>
@@ -46,7 +46,7 @@ export default function MemeSearch({ onSearch, user }) {
           <span className="font-mono text-[0.8rem] uppercase tracking-[0.3em] text-[#ff4a1c] mb-3 flex items-center gap-3">
             <span className="w-2 h-2 bg-[#ff4a1c] animate-pulse"></span> SYSTEM_QUERY_ACTIVE
           </span>
-          <p className="font-mono text-sm text-[#8a8a98] max-w-xl leading-relaxed opacity-80">
+          <p className="font-mono text-base text-[#8a8a98] max-w-3xl leading-relaxed opacity-80">
             Access the high-signal meme intelligence stream. Query frontier templates, viral telemetry, and cultural impact metrics.
           </p>
         </div>

@@ -17,7 +17,7 @@ const Home = ({ waveformHeights, onSearch, user }) => {
               <span>Aggressive Growth • Zero Fluff</span>
             </div>
 
-            <h1 className="font-display font-[800] text-5xl md:text-7xl lg:text-8xl leading-[0.95] text-[#f4f4f5] mb-2 drop-shadow-2xl">
+            <h1 className="font-display font-[800] text-4xl sm:text-5xl md:text-7xl lg:text-8xl leading-[0.95] text-[#f4f4f5] mb-2 drop-shadow-2xl">
               Stop Guessing. <br />
               <span className="block mt-2">
                 <Typewriter 
@@ -27,21 +27,21 @@ const Home = ({ waveformHeights, onSearch, user }) => {
               </span>
             </h1>
 
-            <p className="text-[#8a8a98] max-w-[38rem] mb-6 text-base md:text-lg leading-relaxed font-medium">
+            <p className="text-[#8a8a98] max-w-3xl mb-6 text-lg md:text-xl leading-relaxed font-medium">
               The only intelligence stream engineered for operators, builders, and decision-makers. We dissect frontier models, architectures, and market shifts so you can deploy faster than your competition.
             </p>
 
-            <div className="flex flex-col sm:flex-row items-start gap-5">
-              <button className="btn-cyber h-[3.5rem] px-10 flex items-center justify-center gap-3 text-sm font-semibold text-white uppercase tracking-wider">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-5 w-full sm:w-auto">
+              <button className="btn-cyber w-full sm:w-auto h-[3.5rem] px-10 flex items-center justify-center gap-3 text-sm font-semibold text-white uppercase tracking-wider">
                 <iconify-icon icon="solar:bolt-linear" width="20"></iconify-icon> Get The Briefing
               </button>
 
-              <button className="btn-cyber-ghost h-[3.5rem] px-8 flex items-center justify-center gap-3 text-sm font-semibold text-[#8a8a98] uppercase tracking-wider">
+              <button className="btn-cyber-ghost w-full sm:w-auto h-[3.5rem] px-8 flex items-center justify-center gap-3 text-sm font-semibold text-[#8a8a98] uppercase tracking-wider">
                 Listen to Ep. 248 <iconify-icon icon="solar:arrow-right-linear" width="18"></iconify-icon>
               </button>
             </div>
 
-            <div className="mt-6 flex items-center gap-6 border-t border-[#22222f] pt-4 max-w-[28rem]">
+            <div className="mt-6 flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6 border-t border-[#22222f] pt-4 max-w-lg w-full">
               <div className="flex -space-x-3">
                 <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80" alt="User" className="w-10 h-10 rounded-full border-2 border-[#070709] object-cover grayscale" />
                 <img src="https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=100&q=80" alt="User" className="w-10 h-10 rounded-full border-2 border-[#070709] object-cover grayscale" />

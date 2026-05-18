@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, Link, useNavigate } from 'react-router-dom';
 
-export default function MemeResult() {
+export default function MemeResult({ user }) {
   const [memes, setMemes] = useState([]);
   const [loading, setLoading] = useState(true);
   const location = useLocation();
@@ -17,10 +17,22 @@ export default function MemeResult() {
   const handleLocalSearch = (e) => {
     e.preventDefault();
     if (!searchInputValue.trim()) return;
+    
+    if (!user) {
+      localStorage.setItem('pending_search_query', searchInputValue);
+      navigate('/login');
+      return;
+    }
+
     navigate(`/results?q=${encodeURIComponent(searchInputValue)}`);
   };
 
   useEffect(() => {
+    if (!user) {
+      navigate('/login');
+      return;
+    }
+
     // Simulate backend fetch
     setLoading(true);
     setTimeout(() => {
@@ -52,7 +64,7 @@ export default function MemeResult() {
           </h1>
 
           {/* LOCAL SEARCH BAR */}
-          <form onSubmit={handleLocalSearch} className="flex w-full max-w-[32rem] relative group">
+          <form onSubmit={handleLocalSearch} className="flex flex-col sm:flex-row w-full max-w-[32rem] relative group gap-3 sm:gap-0">
             <div className="flex-1 relative border border-[#22222f] bg-[#0a0a0d]/60 backdrop-blur-xl p-1 group-focus-within:border-[#ff4a1c]/60 transition-all duration-300 flex items-center" style={{ clipPath: 'polygon(0 0, 100% 0, 100% calc(100% - 0.75rem), calc(100% - 0.75rem) 100%, 0 100%)' }}>
               <iconify-icon icon="solar:minimalistic-magnifer-linear" width="20" className="text-[#8a8a98] ml-4 group-focus-within:text-[#ff4a1c]"></iconify-icon>
               <input 
@@ -63,7 +75,7 @@ export default function MemeResult() {
                 className="w-full bg-transparent px-4 py-3 text-sm font-mono text-[#f4f4f5] placeholder:text-[#22222f] focus:outline-none focus:ring-0" 
               />
             </div>
-            <button type="submit" className="btn-cyber h-[3.25rem] px-6 text-xs font-bold text-white uppercase tracking-wider -ml-4 flex items-center justify-center">
+            <button type="submit" className="btn-cyber w-full sm:w-auto h-[3.25rem] px-6 text-xs font-bold text-white uppercase tracking-wider sm:-ml-4 flex items-center justify-center">
               Execute
             </button>
           </form>

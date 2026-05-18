@@ -47,7 +47,7 @@ export default function BackgroundCanvas() {
     };
 
     const drawBackground = () => {
-      ctx.fillStyle = '#070709';
+      ctx.fillStyle = '#000000';
       ctx.fillRect(0, 0, width, height);
       
       time += 0.008;
@@ -79,7 +79,7 @@ export default function BackgroundCanvas() {
           const maxDist = 200;
           const maxDistSq = 40000; // Pre-calculated maxDist * maxDist
           
-          let opacity = (Math.sin(p.pulse) * 0.5 + 0.5) * 0.1;
+          let opacity = (Math.sin(p.pulse) * 0.5 + 0.5) * 0.25;
           let size = 1;
           
           if (distSq < maxDistSq) {
@@ -88,7 +88,7 @@ export default function BackgroundCanvas() {
             opacity += ratio * 0.4;
             size += ratio * 1.5;
             
-            const strokeAlpha = ratio * 0.15;
+            const strokeAlpha = ratio * 0.3;
             
             if (x < cols - 1) {
               const p2 = grid[x+1][y];
@@ -122,7 +122,7 @@ export default function BackgroundCanvas() {
       
       const grad = ctx.createLinearGradient(0, 0, 0, height);
       grad.addColorStop(0, 'rgba(255, 74, 28, 0)');
-      grad.addColorStop(0.5, 'rgba(255, 74, 28, 0.02)');
+      grad.addColorStop(0.5, 'rgba(255, 74, 28, 0.05)');
       grad.addColorStop(1, 'rgba(255, 74, 28, 0)');
       ctx.fillStyle = grad;
 
@@ -150,7 +150,7 @@ export default function BackgroundCanvas() {
   return (
     <canvas 
       ref={canvasRef} 
-      className="fixed inset-0 w-full h-full pointer-events-none z-0 opacity-60"
+      className="fixed inset-0 w-full h-full pointer-events-none z-0 opacity-100"
       style={{ mixBlendMode: 'screen' }}
     />
   );
