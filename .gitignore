@@ -1,0 +1,17 @@
+.env
+backend/.env
+backend/worker/_pycache__/test.cpython-311.pyc
+backend/memes/
+backend/node_modules/
+node_modules/
+frontend/node_modules/
+dist/
+build/
+.kaggle/
+download_gifs.ps1/
+.env
+node_modules/
+frontend/node_modules/
+dist/
+frontend/dist/
+

@@ -1,0 +1,9 @@
+b2sdk
+psycopg2-binary
+torch
+torchvision
+transformers
+Pillow
+python-dotenv
+fastapi
+uvicorn

@@ -1,0 +1,66 @@
+import React from 'react';
+import MemeSearch from './MemeSearch';
+import Typewriter from './Typewriter';
+
+const Home = ({ waveformHeights, onSearch, user }) => {
+  return (
+    <>
+      {/* 01 / HERO SECTION */}
+      <section className="relative pt-24 md:pt-32 pb-16 md:pb-24 min-h-screen flex flex-col items-start overflow-hidden z-10">
+        <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-[#ff4a1c]/50 to-transparent opacity-50 animate-scanline"></div>
+
+        <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 relative z-10 flex flex-col items-start">
+
+          <div className="reveal active">
+            <div className="mb-3 flex items-center gap-4 font-mono text-sm uppercase tracking-[0.2em] text-[#8a8a98]">
+              <span className="px-2 py-1 border border-[#22222f] bg-[#111116] rounded-sm text-[#ff4a1c]">SYS.01</span>
+              <span>Aggressive Growth • Zero Fluff</span>
+            </div>
+
+            <h1 className="font-display font-[800] text-4xl sm:text-5xl md:text-7xl lg:text-8xl leading-[0.95] text-[#f4f4f5] mb-2 drop-shadow-2xl">
+              Stop Guessing. <br />
+              <span className="block mt-2">
+                <Typewriter 
+                  phrases={["Dominate AI.", "Execute Faster.", "Scale Smarter.", "Build Future."]}
+                  className="text-transparent bg-clip-text bg-gradient-to-r from-[#ff4a1c] to-[#ff8c42]"
+                />
+              </span>
+            </h1>
+
+            <p className="text-[#8a8a98] max-w-3xl mb-6 text-lg md:text-xl leading-relaxed font-medium">
+              The only intelligence stream engineered for operators, builders, and decision-makers. We dissect frontier models, architectures, and market shifts so you can deploy faster than your competition.
+            </p>
+
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-5 w-full sm:w-auto">
+              <button className="btn-cyber w-full sm:w-auto h-[3.5rem] px-10 flex items-center justify-center gap-3 text-sm font-semibold text-white uppercase tracking-wider">
+                <iconify-icon icon="solar:bolt-linear" width="20"></iconify-icon> Get The Briefing
+              </button>
+
+              <button className="btn-cyber-ghost w-full sm:w-auto h-[3.5rem] px-8 flex items-center justify-center gap-3 text-sm font-semibold text-[#8a8a98] uppercase tracking-wider">
+                Listen to Ep. 248 <iconify-icon icon="solar:arrow-right-linear" width="18"></iconify-icon>
+              </button>
+            </div>
+
+            <div className="mt-6 flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6 border-t border-[#22222f] pt-4 max-w-lg w-full">
+              <div className="flex -space-x-3">
+                <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80" alt="User" className="w-10 h-10 rounded-full border-2 border-[#070709] object-cover grayscale" />
+                <img src="https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=100&q=80" alt="User" className="w-10 h-10 rounded-full border-2 border-[#070709] object-cover grayscale" />
+                <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=100&q=80" alt="User" className="w-10 h-10 rounded-full border-2 border-[#070709] object-cover grayscale" />
+                <div className="w-10 h-10 rounded-full border-2 border-[#070709] bg-[#1a1a24] flex items-center justify-center text-[0.6rem] font-mono text-[#ff4a1c]">+1.2M</div>
+              </div>
+              <div className="font-mono text-xs text-[#8a8a98] uppercase leading-tight">
+                Active builders<br />tuning in weekly
+              </div>
+            </div>
+          </div>
+        </div>
+        <span className="accoutrement-coord" style={{ bottom: '2rem', right: '2rem' }}>LOC: 40.7128° N, 74.0060° W</span>
+      </section>
+
+      {/* 01.5 / ARCHIVE RECON (SEARCH) */}
+      <MemeSearch onSearch={onSearch} user={user} />
+    </>
+  );
+};
+
+export default React.memo(Home);
