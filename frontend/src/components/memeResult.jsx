@@ -38,7 +38,10 @@ export default function MemeResult({ user }) {
     const fetchMemes = async () => {
       setLoading(true);
       try {
-        const apiUrl = import.meta.env.VITE_API_URL || '';
+        // Automatically remove any accidental trailing slashes from the environment variable
+        const rawApiUrl = import.meta.env.VITE_API_URL || '';
+        const apiUrl = rawApiUrl.replace(/\/+$/, '');
+        
         const res = await fetch(`${apiUrl}/api/search?q=${encodeURIComponent(query)}&format=${activeFilter}`);
         if (!res.ok) throw new Error('Failed to fetch memes');
         const data = await res.json();
@@ -46,7 +49,7 @@ export default function MemeResult({ user }) {
         const formattedMemes = data.map(m => ({
           id: m.b2_key,
           title: m.caption || m.b2_key,
-          url: m.url,
+          url: m.url.startsWith('http') ? m.url : `${apiUrl}${m.url}`,
           tags: m.format ? [m.format] : [],
           format: m.format
         }));
