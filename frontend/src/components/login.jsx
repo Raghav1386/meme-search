@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
 import { auth, googleProvider, facebookProvider, db } from '../firebase';
 
-export default function Login({ onLogin }) {
+export default function Login({ onLogin, isModal = false }) {
   const navigate = useNavigate();
-  const [isLogin, setIsLogin] = useState(true);
+  const location = useLocation();
+  const [isLogin, setIsLogin] = useState(!location.state?.isSignUp);
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [errorMsg, setErrorMsg] = useState(null);
   const [formData, setFormData] = useState({
@@ -40,12 +41,14 @@ export default function Login({ onLogin }) {
     }
 
     onLogin(user);
-    const pendingSearch = localStorage.getItem('pending_search_query');
-    if (pendingSearch) {
-      localStorage.removeItem('pending_search_query');
-      navigate(`/results?q=${encodeURIComponent(pendingSearch)}`);
-    } else {
-      navigate('/');
+    if (!isModal) {
+      const pendingSearch = localStorage.getItem('pending_search_query');
+      if (pendingSearch) {
+        localStorage.removeItem('pending_search_query');
+        navigate(`/results?q=${encodeURIComponent(pendingSearch)}`);
+      } else {
+        navigate('/');
+      }
     }
   };
 
@@ -61,6 +64,7 @@ export default function Login({ onLogin }) {
           username: userCredential.user.email, 
           name: userCredential.user.displayName || formData.username,
           uid: userCredential.user.uid,
+          photoURL: userCredential.user.photoURL,
           method: 'Email'
         });
       } else {
@@ -90,6 +94,7 @@ export default function Login({ onLogin }) {
 
   const handleSocialLogin = async (platform) => {
     setErrorMsg(null);
+    setIsAuthenticating(true);
     try {
       const provider = platform === 'Google' ? googleProvider : facebookProvider;
       const userCredential = await signInWithPopup(auth, provider);
@@ -97,21 +102,23 @@ export default function Login({ onLogin }) {
         username: userCredential.user.email, 
         name: userCredential.user.displayName,
         uid: userCredential.user.uid,
+        photoURL: userCredential.user.photoURL,
         method: platform
       });
     } catch (err) {
       console.error("Social Auth Error:", err);
       setErrorMsg(err.message);
+      setIsAuthenticating(false);
     }
   };
 
   return (
-    <div className="pt-[10rem] pb-[6rem] min-h-screen flex items-center justify-center relative overflow-hidden px-4">
+    <div className={`${isModal ? 'py-4' : 'pt-[10rem] pb-[6rem] min-h-screen'} flex items-center justify-center relative overflow-hidden px-4`}>
       {/* Decorative Scanline */}
-      <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-[#ff4a1c]/50 to-transparent opacity-30 animate-scanline pointer-events-none"></div>
+      {!isModal && <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-[#ff4a1c]/50 to-transparent opacity-30 animate-scanline pointer-events-none"></div>}
       
       {/* Background Accent Glow */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-[#ff4a1c] opacity-[0.05] blur-[120px] pointer-events-none rounded-full"></div>
+      {!isModal && <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-[#ff4a1c] opacity-[0.05] blur-[120px] pointer-events-none rounded-full"></div>}
 
       <div className="w-full max-w-[28rem] relative z-10 reveal-login opacity-0 translate-y-8 transition-all duration-700 ease-out">
         
@@ -133,7 +140,7 @@ export default function Login({ onLogin }) {
               </h2>
             </div>
             <p className="text-[#8a8a98] text-xs font-mono uppercase tracking-widest leading-relaxed">
-              {isAuthenticating ? 'Syncing with secure network' : (isLogin ? 'Access the intelligence matrix' : 'Join the roster of operators')}
+              {isAuthenticating ? 'Syncing with secure network' : (isLogin ? 'Access the meme matrix' : 'Join the meme community')}
             </p>
           </div>
 
@@ -221,8 +228,20 @@ export default function Login({ onLogin }) {
                 )}
 
                 <button type="submit" className="btn-cyber w-full py-4 text-xs font-[900] text-white uppercase tracking-[0.25em] shadow-[0_0_20px_rgba(255,74,28,0.2)]">
-                  {isLogin ? 'Execute Authentication' : 'Create Intelligence Profile'}
+                  {isLogin ? 'Execute Authentication' : 'Create Profile'}
                 </button>
+
+                <div className="text-center pt-2">
+                  {isLogin ? (
+                    <p className="font-mono text-[0.65rem] text-[#8a8a98] uppercase tracking-widest">
+                      No profile detected? <button type="button" onClick={() => setIsLogin(false)} className="text-[#ff4a1c] hover:underline ml-1 transition-colors">Join the Network</button>
+                    </p>
+                  ) : (
+                    <p className="font-mono text-[0.65rem] text-[#8a8a98] uppercase tracking-widest">
+                      Already have clearance? <button type="button" onClick={() => setIsLogin(true)} className="text-[#ff4a1c] hover:underline ml-1 transition-colors">Sign In</button>
+                    </p>
+                  )}
+                </div>
               </form>
 
               {/* Social Logins */}
@@ -233,20 +252,13 @@ export default function Login({ onLogin }) {
                   <div className="h-[1px] flex-1 bg-[#22222f]"></div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4">
                   <button 
                     onClick={() => handleSocialLogin('Google')}
                     className="flex items-center justify-center gap-3 bg-[#070709] border border-[#22222f] py-3 text-[0.65rem] font-mono uppercase tracking-widest text-[#8a8a98] hover:text-[#f4f4f5] hover:border-[#ff4a1c]/40 transition-all" 
                     style={{ clipPath: 'polygon(0 0, 100% 0, 100% calc(100% - 0.5rem), calc(100% - 0.5rem) 100%, 0 100%)' }}>
                     <iconify-icon icon="logos:google-icon" width="16"></iconify-icon>
                     Google
-                  </button>
-                  <button 
-                    onClick={() => handleSocialLogin('Facebook')}
-                    className="flex items-center justify-center gap-3 bg-[#070709] border border-[#22222f] py-3 text-[0.65rem] font-mono uppercase tracking-widest text-[#8a8a98] hover:text-[#f4f4f5] hover:border-[#ff4a1c]/40 transition-all"
-                    style={{ clipPath: 'polygon(0 0, 100% 0, 100% calc(100% - 0.5rem), calc(100% - 0.5rem) 100%, 0 100%)' }}>
-                    <iconify-icon icon="logos:facebook" width="16"></iconify-icon>
-                    Facebook
                   </button>
                 </div>
               </div>

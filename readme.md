@@ -51,3 +51,17 @@ Alternatively, you can run all of them at the same time with a single command fr
 ```bash
 npx concurrently "npm --prefix frontend run dev" "npm --prefix backend run dev" "cd backend/worker && uvicorn test:app --host 127.0.0.1 --port 8000"
 ```
+
+## Troubleshooting: Facebook Login "App not active" Error
+
+If you see an error saying **"App not active: This app is not currently accessible..."** when trying to use Facebook Login in production (like on your Render deployment), it means your Facebook App is still in "Development" mode. 
+
+By default, only the app creator can log in while in Development mode.
+
+**Step-by-Step Fix:**
+1. Log in to the [Meta for Developers Dashboard](https://developers.facebook.com/apps/) and click on your specific Meme Search app.
+2. In the left-hand menu, navigate to **App Settings > Basic**.
+3. Facebook requires you to provide a **Privacy Policy URL** and **Data Deletion Instructions URL** before going live. Add your deployed Render URL here (e.g., `https://your-app.onrender.com/privacy`).
+4. Look at the very top header of the dashboard for the **App Mode** toggle switch. 
+5. Click the toggle to switch it from **Development** to **Live**.
+6. Test your login again on your deployed site. The error will immediately disappear for all users!

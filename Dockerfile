@@ -21,5 +21,5 @@ RUN python -c "from transformers import CLIPProcessor, CLIPModel; CLIPModel.from
 # Copy the python worker files
 COPY backend/worker ./backend/worker
 
-# Start the FastAPI server using the PORT provided by Railway
-CMD ["sh", "-c", "cd backend/worker && uvicorn test:app --host 0.0.0.0 --port ${PORT:-8000}"]
+# Start the FastAPI server using the PORT provided by Railway/Render/HF
+CMD ["sh", "-c", "cd backend/worker && uvicorn test:app --host 0.0.0.0 --port ${PORT:-7860}"]

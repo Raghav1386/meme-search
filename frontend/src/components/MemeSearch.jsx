@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-export default function MemeSearch({ onSearch, user }) {
+export default function MemeSearch({ onSearch, user, requireAuth }) {
   const [searchQuery, setSearchQuery] = useState('');
   const navigate = useNavigate();
 
@@ -10,8 +10,11 @@ export default function MemeSearch({ onSearch, user }) {
     if (!searchQuery.trim()) return;
     
     if (!user) {
-      localStorage.setItem('pending_search_query', searchQuery);
-      navigate('/login');
+      requireAuth('Authentication Required to Search', () => {
+        if (onSearch) onSearch(searchQuery);
+        navigate(`/results?q=${encodeURIComponent(searchQuery)}`);
+        setSearchQuery('');
+      });
       return;
     }
 
@@ -47,7 +50,7 @@ export default function MemeSearch({ onSearch, user }) {
             <span className="w-2 h-2 bg-[#ff4a1c] animate-pulse"></span> SYSTEM_QUERY_ACTIVE
           </span>
           <p className="font-mono text-base text-[#8a8a98] max-w-3xl leading-relaxed opacity-80">
-            Access the high-signal meme intelligence stream. Query frontier templates, viral telemetry, and cultural impact metrics.
+            Access the ultimate meme stream. Query frontier templates, viral telemetry, and cultural impact metrics.
           </p>
         </div>
 

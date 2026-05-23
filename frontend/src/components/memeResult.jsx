@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useLocation, Link, useNavigate } from 'react-router-dom';
 import Filter from './filter';
 
-export default function MemeResult({ user }) {
+export default function MemeResult({ user, requireAuth }) {
   const [memes, setMemes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState('all');
@@ -21,8 +21,9 @@ export default function MemeResult({ user }) {
     if (!searchInputValue.trim()) return;
     
     if (!user) {
-      localStorage.setItem('pending_search_query', searchInputValue);
-      navigate('/login');
+      requireAuth('Authentication Required to Search', () => {
+        navigate(`/results?q=${encodeURIComponent(searchInputValue)}`);
+      });
       return;
     }
 
@@ -30,10 +31,7 @@ export default function MemeResult({ user }) {
   };
 
   useEffect(() => {
-    if (!user) {
-      navigate('/login');
-      return;
-    }
+
 
     const fetchMemes = async () => {
       setLoading(true);
@@ -76,10 +74,10 @@ export default function MemeResult({ user }) {
         <div>
           <div className="flex items-center gap-3 font-mono text-[0.65rem] text-[#ff4a1c] mb-3 uppercase tracking-widest">
             <span className="w-2 h-2 bg-[#ff4a1c] animate-pulse"></span>
-            <span>Archive Selection // query: {query}</span>
+            <span>Meme Database // query: {query}</span>
           </div>
           <h1 className="font-display font-[800] text-4xl md:text-5xl text-[#f4f4f5] leading-none mb-6">
-            Retrieved <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#ff4a1c] to-[#ff8c42]">Artifacts.</span>
+            Dank <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#ff4a1c] to-[#ff8c42]">Memes.</span>
           </h1>
 
           {/* LOCAL SEARCH BAR */}
@@ -95,7 +93,7 @@ export default function MemeResult({ user }) {
               />
             </div>
             <button type="submit" className="btn-cyber w-full sm:w-auto h-[3.25rem] px-6 text-xs font-bold text-white uppercase tracking-wider sm:-ml-4 flex items-center justify-center">
-              Execute
+              Search
             </button>
           </form>
           
@@ -105,7 +103,7 @@ export default function MemeResult({ user }) {
         
         <div className="flex gap-4 font-mono text-[0.6rem]">
           <div className="px-4 py-2 bg-[#111116] border border-[#22222f] text-[#8a8a98]">
-            STATUS: <span className="text-[#ff4a1c]">SYNC_COMPLETE</span>
+            STATUS: <span className="text-[#ff4a1c]">MEMES_FOUND</span>
           </div>
           <div className="px-4 py-2 bg-[#111116] border border-[#22222f] text-[#8a8a98]">
             UNITS: <span className="text-[#f4f4f5]">{filteredMemes.length}</span>
@@ -117,7 +115,7 @@ export default function MemeResult({ user }) {
         {loading ? (
           <div className="h-64 flex flex-col items-center justify-center gap-6">
             <div className="w-12 h-12 border-2 border-[#ff4a1c] border-t-transparent rounded-full animate-spin"></div>
-            <span className="font-mono text-xs text-[#ff4a1c] animate-pulse uppercase">decrypting_data_stream...</span>
+            <span className="font-mono text-xs text-[#ff4a1c] animate-pulse uppercase">loading_memes...</span>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -145,17 +143,12 @@ export default function MemeResult({ user }) {
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-[#070709] to-transparent opacity-60 group-hover:opacity-20 transition-opacity"></div>
                   
-                  {/* Overlay ID */}
-                  <div className="absolute top-4 left-4 font-mono text-[0.6rem] bg-[#070709]/80 border border-[#22222f] px-2 py-1 text-[#ff4a1c]">
-                    {meme.id}
-                  </div>
+
                 </div>
 
                 {/* Content */}
                 <div className="flex flex-col gap-3 flex-1 px-2 pb-2">
-                  <h3 className="font-display font-bold text-lg text-[#f4f4f5] tracking-tight group-hover:text-[#ff4a1c] transition-colors uppercase">
-                    {meme.title}
-                  </h3>
+
                   
                   <div className="flex flex-wrap gap-2 mt-auto">
                     {meme.tags.map(tag => (
@@ -166,9 +159,17 @@ export default function MemeResult({ user }) {
                   </div>
 
                   <button 
-                    onClick={() => navigate('/preview', { state: { meme } })}
+                    onClick={() => {
+                      if (!user) {
+                        requireAuth('Authentication Required to View Meme Data', () => {
+                          navigate('/preview', { state: { meme } });
+                        });
+                      } else {
+                        navigate('/preview', { state: { meme } });
+                      }
+                    }}
                     className="btn-cyber w-full py-3 mt-4 text-[0.65rem] font-bold uppercase tracking-widest opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0 transition-all duration-300">
-                    Extract Data
+                    View Meme
                   </button>
                 </div>
               </div>

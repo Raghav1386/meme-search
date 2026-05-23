@@ -1,7 +1,7 @@
 import express from "express";
 import { getEmbedding } from "./embed.js";
 import { queryMemes } from "./db.js";
-import { getB2Url } from "./b2url.js";
+
 
 const router = express.Router();
 

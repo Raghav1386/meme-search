@@ -1,7 +1,9 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 
 export default function Sidebar({ isOpen, onClose, history, onClearHistory, user, totalUsers }) {
+  const navigate = useNavigate();
   return (
     <AnimatePresence>
       {isOpen && (
@@ -81,16 +83,25 @@ export default function Sidebar({ isOpen, onClose, history, onClearHistory, user
                   <span className="w-1.5 h-1.5 bg-[#ff4a1c] rounded-full"></span> INTEL_STREAMS
                 </h5>
                 <div className="grid grid-cols-1 gap-2">
-                  {['Reaction Memes', 'Technical Artifacts', 'S-Tier Templates', 'Cultural Telemetry'].map((label, idx) => (
+                  {[
+                    { label: 'Reaction Memes', query: 'reaction' },
+                    { label: 'Programming & Tech', query: 'programming' },
+                    { label: 'Dank Artifacts', query: 'dank' },
+                    { label: 'Shitposts', query: 'shitpost' }
+                  ].map((item, idx) => (
                     <motion.button 
-                      key={label}
+                      key={item.label}
+                      onClick={() => {
+                        navigate(`/results?q=${encodeURIComponent(item.query)}`);
+                        onClose();
+                      }}
                       initial={{ opacity: 0, x: -10 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: 0.3 + idx * 0.05 }}
-                      className="group flex items-center gap-4 p-3 text-[#8a8a98] hover:text-[#f4f4f5] transition-colors"
+                      className="group flex items-center gap-4 p-3 text-[#8a8a98] hover:text-[#f4f4f5] transition-colors w-full text-left"
                     >
                       <div className="w-1.5 h-1.5 bg-[#22222f] group-hover:bg-[#ff4a1c] group-hover:scale-125 transition-all"></div>
-                      <span className="font-mono text-xs uppercase tracking-widest">{label}</span>
+                      <span className="font-mono text-xs uppercase tracking-widest">{item.label}</span>
                     </motion.button>
                   ))}
                 </div>

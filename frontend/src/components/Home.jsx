@@ -2,7 +2,7 @@ import React from 'react';
 import MemeSearch from './MemeSearch';
 import Typewriter from './Typewriter';
 
-const Home = ({ waveformHeights, onSearch, user }) => {
+const Home = ({ waveformHeights, onSearch, user, requireAuth }) => {
   return (
     <>
       {/* 01 / HERO SECTION */}
@@ -18,30 +18,30 @@ const Home = ({ waveformHeights, onSearch, user }) => {
             </div>
 
             <h1 className="font-display font-[800] text-4xl sm:text-5xl md:text-7xl lg:text-8xl leading-[0.95] text-[#f4f4f5] mb-2 drop-shadow-2xl">
-              Stop Guessing. <br />
+              Stop Scrolling. <br />
               <span className="block mt-2">
-                <Typewriter 
-                  phrases={["Dominate AI.", "Execute Faster.", "Scale Smarter.", "Build Future."]}
+                <Typewriter
+                  phrases={["Find Dank Memes.", "Search by Vibes.", "Go Viral Faster.", "Share the Laughs."]}
                   className="text-transparent bg-clip-text bg-gradient-to-r from-[#ff4a1c] to-[#ff8c42]"
                 />
               </span>
             </h1>
 
             <p className="text-[#8a8a98] max-w-3xl mb-6 text-lg md:text-xl leading-relaxed font-medium">
-              The only intelligence stream engineered for operators, builders, and decision-makers. We dissect frontier models, architectures, and market shifts so you can deploy faster than your competition.
+              The ultimate meme search engine for creators, memers, and internet explorers. Find the perfect meme instantly and share it with the world.
             </p>
 
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-5 w-full sm:w-auto">
-              <button className="btn-cyber w-full sm:w-auto h-[3.5rem] px-10 flex items-center justify-center gap-3 text-sm font-semibold text-white uppercase tracking-wider">
-                <iconify-icon icon="solar:bolt-linear" width="20"></iconify-icon> Get The Briefing
+              <button className="btn-cyber w-full sm:w-auto h-[3.5rem] px-10 flex items-center justify-center gap-3 text-sm font-semibold text-white uppercase tracking-wider" onClick={() => window.scrollTo(0, document.querySelector('form')?.offsetTop || 500)}>
+                <iconify-icon icon="solar:minimalistic-magnifer-linear" width="20"></iconify-icon> Start Searching
               </button>
 
               <button className="btn-cyber-ghost w-full sm:w-auto h-[3.5rem] px-8 flex items-center justify-center gap-3 text-sm font-semibold text-[#8a8a98] uppercase tracking-wider">
-                Listen to Ep. 248 <iconify-icon icon="solar:arrow-right-linear" width="18"></iconify-icon>
+                Browse Trending <iconify-icon icon="solar:arrow-right-linear" width="18"></iconify-icon>
               </button>
             </div>
 
-            <div className="mt-6 flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6 border-t border-[#22222f] pt-4 max-w-lg w-full">
+            {/* <div className="mt-6 flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6 border-t border-[#22222f] pt-4 max-w-lg w-full">
               <div className="flex -space-x-3">
                 <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80" alt="User" className="w-10 h-10 rounded-full border-2 border-[#070709] object-cover grayscale" />
                 <img src="https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=100&q=80" alt="User" className="w-10 h-10 rounded-full border-2 border-[#070709] object-cover grayscale" />
@@ -51,14 +51,14 @@ const Home = ({ waveformHeights, onSearch, user }) => {
               <div className="font-mono text-xs text-[#8a8a98] uppercase leading-tight">
                 Active builders<br />tuning in weekly
               </div>
-            </div>
+            </div> */}
           </div>
         </div>
         <span className="accoutrement-coord" style={{ bottom: '2rem', right: '2rem' }}>LOC: 40.7128° N, 74.0060° W</span>
       </section>
 
       {/* 01.5 / ARCHIVE RECON (SEARCH) */}
-      <MemeSearch onSearch={onSearch} user={user} />
+      <MemeSearch onSearch={onSearch} user={user} requireAuth={requireAuth} />
     </>
   );
 };

@@ -22,7 +22,7 @@ export const queryMemes = async (embedding, format) => {
         FROM memes
         WHERE format = $2
         ORDER BY embedding <=> $1::vector
-        LIMIT 10;
+        LIMIT 12;
         `,
         [JSON.stringify(embedding), format]
       );
@@ -32,7 +32,7 @@ export const queryMemes = async (embedding, format) => {
         SELECT b2_key, caption, format
         FROM memes
         ORDER BY embedding <=> $1::vector
-        LIMIT 10;
+        LIMIT 12;
         `,
         [JSON.stringify(embedding)]
       );

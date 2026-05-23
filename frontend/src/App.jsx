@@ -1,13 +1,16 @@
 import React, { useEffect, useMemo, useState, memo } from 'react';
 import { BrowserRouter, Routes, Route, Link, useLocation } from 'react-router-dom';
 import { doc, getDoc, setDoc, collection, getCountFromServer } from 'firebase/firestore';
-import { db } from './firebase';
+import { db, auth } from './firebase';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
 import BackgroundCanvas from './components/BackgroundCanvas';
 import MemeResult from './components/memeResult';
 import Login from './components/login';
 import Sidebar from './components/sidebar';
 import Home from './components/Home';
 import Preview from './components/preview';
+import UserProfileSidebar from './components/UserProfileSidebar';
+import AuthModal from './components/AuthModal';
 
 // --- SHARED COMPONENTS ---
 
@@ -52,8 +55,8 @@ const NewsletterSection = () => (
         <iconify-icon icon="solar:bolt-bold" width="28"></iconify-icon>
       </div>
 
-      <h2 className="font-display font-[800] text-3xl md:text-5xl lg:text-6xl leading-[1] text-[#f4f4f5] mb-6">Growth doesn't wait.</h2>
-      <p className="text-[#8a8a98] mb-12 text-base md:text-lg font-medium">Get the briefing every Thursday. What dropped, why it matters, how to architect it. Join 42,000 operators who build the future.</p>
+      <h2 className="font-display font-[800] text-3xl md:text-5xl lg:text-6xl leading-[1] text-[#f4f4f5] mb-6">Memes move fast.</h2>
+      <p className="text-[#8a8a98] mb-12 text-base md:text-lg font-medium">Get the top meme drops every Thursday. What went viral, why it's funny, and the lore behind it. Join 42,000 memers who stay ahead of the internet.</p>
 
       <form className="flex flex-col sm:flex-row gap-0 w-full mb-8 relative group" onSubmit={(e) => e.preventDefault()}>
         <div className="flex-1 relative border border-[#22222f] bg-[#0a0a0d] p-1 group-focus-within:border-[#ff4a1c]/60 transition-colors flex items-center" style={{ clipPath: 'polygon(0 0, 100% 0, 100% calc(100% - 1rem), calc(100% - 1rem) 100%, 0 100%)' }}>
@@ -62,7 +65,7 @@ const NewsletterSection = () => (
         </div>
 
         <button type="submit" className="btn-cyber w-full sm:w-auto mt-4 sm:mt-0 sm:-ml-4 h-[4.5rem] px-10 text-sm font-bold text-white uppercase tracking-widest shrink-0 border-l border-[#070709] flex items-center justify-center">
-          Initialize
+          Subscribe
         </button>
       </form>
 
@@ -77,11 +80,43 @@ const NewsletterSection = () => (
 // --- MAIN APP CONTENT COMPONENT ---
 function AppContent() {
   const location = useLocation();
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [location.pathname]);
+
   const [user, setUser] = useState(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isUserProfileOpen, setIsUserProfileOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [searchHistory, setSearchHistory] = useState([]);
   const [totalUsers, setTotalUsers] = useState(0);
+  const [authModalConfig, setAuthModalConfig] = useState({ isOpen: false, message: '', onSuccess: null });
+
+  const requireAuth = (message, onSuccess) => {
+    setAuthModalConfig({ isOpen: true, message, onSuccess });
+  };
+
+  // Persist authentication state
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      if (firebaseUser) {
+        setUser({
+          uid: firebaseUser.uid,
+          name: firebaseUser.displayName || firebaseUser.email?.split('@')[0],
+          username: firebaseUser.email,
+          email: firebaseUser.email,
+          photoURL: firebaseUser.photoURL,
+          method: firebaseUser.providerData[0]?.providerId === 'google.com' ? 'Google' : 
+                  firebaseUser.providerData[0]?.providerId === 'facebook.com' ? 'Facebook' : 'Email'
+        });
+      } else {
+        setUser(null);
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   // Fetch Total Users
   useEffect(() => {
@@ -126,8 +161,14 @@ function AppContent() {
     }
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+    } catch (error) {
+      console.error("Error signing out: ", error);
+    }
     setUser(null);
+    setIsUserProfileOpen(false);
   };
 
   const addToHistory = async (query) => {
@@ -216,35 +257,44 @@ function AppContent() {
                 <path d="M2 23L16 30L30 23" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"></path>
                 <path d="M2 16L16 23L30 16" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"></path>
               </svg>
-              <span className="font-display font-[800] text-xl tracking-tighter text-[#f4f4f5]">NEXUS</span>
+              <span className="font-display font-[800] text-xl tracking-tighter text-[#f4f4f5]">MEME SEARCH</span>
             </Link>
           </div>
 
           <div className="hidden lg:flex items-center gap-10 text-sm font-mono font-medium text-[#8a8a98]">
-            <a href="/#intel" className="relative hover:text-[#f4f4f5] transition-colors accoutrement-bracket uppercase">Intelligence</a>
-            <a href="/#dashboard" className="relative hover:text-[#f4f4f5] transition-colors accoutrement-bracket uppercase">Platform</a>
-            <a href="/#manifesto" className="relative hover:text-[#f4f4f5] transition-colors accoutrement-bracket uppercase">Manifesto</a>
+            <a href="/#memes" className="relative hover:text-[#f4f4f5] transition-colors accoutrement-bracket uppercase">Memes</a>
+            <a href="/#app" className="relative hover:text-[#f4f4f5] transition-colors accoutrement-bracket uppercase">App</a>
+            <a href="/#about" className="relative hover:text-[#f4f4f5] transition-colors accoutrement-bracket uppercase">About</a>
           </div>
 
           <div className="hidden md:flex items-center gap-4">
             {user ? (
               <div className="flex items-center gap-6">
-                <div className="flex flex-col items-end">
-                  <span className="font-mono text-[0.75rem] text-[#ff4a1c] uppercase tracking-widest leading-none mb-1 flex items-center gap-2">
-                      <span className="w-1.5 h-1.5 bg-[#ff4a1c] rounded-full animate-pulse"></span> OPERATOR_ONLINE
-                  </span>
-                  <span className="font-display font-bold text-sm text-[#f4f4f5] uppercase">{user.name || user.username}</span>
-                </div>
-                <button onClick={handleLogout} className="btn-cyber-ghost text-[0.65rem] px-4 py-2 uppercase tracking-widest font-mono text-[#8a8a98] hover:text-[#ff4a1c]">
-                  Sign Out
+                <button onClick={() => setIsUserProfileOpen(true)} className="flex items-center gap-3 hover:opacity-80 transition-opacity text-left">
+                  {user.photoURL ? (
+                    <img src={user.photoURL} alt="User Avatar" referrerPolicy="no-referrer" className="w-10 h-10 rounded-full border border-[#22222f] object-cover" />
+                  ) : (
+                    <div className="w-10 h-10 rounded-full border border-[#22222f] bg-[#111116] flex items-center justify-center text-[#f4f4f5]">
+                      {user.method === 'Google' ? <iconify-icon icon="logos:google-icon"></iconify-icon> :
+                       user.method === 'Facebook' ? <iconify-icon icon="logos:facebook"></iconify-icon> :
+                       <iconify-icon icon="solar:user-bold" width="18"></iconify-icon>}
+                    </div>
+                  )}
+                  <div className="flex flex-col items-end">
+                    <span className="font-mono text-[0.75rem] text-[#ff4a1c] uppercase tracking-widest leading-none mb-1 flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 bg-[#ff4a1c] rounded-full animate-pulse"></span> OPERATOR_ONLINE
+                    </span>
+                    <span className="font-display font-bold text-sm text-[#f4f4f5] uppercase">{user.name || user.username}</span>
+                  </div>
                 </button>
               </div>
             ) : (
               <>
-                <span className="font-mono text-[0.75rem] text-[#ff4a1c] animate-pulse uppercase tracking-widest flex items-center gap-2">
+                <span className="font-mono text-[0.75rem] text-[#ff4a1c] animate-pulse uppercase tracking-widest flex items-center gap-2 hidden lg:flex">
                   <span className="w-1.5 h-1.5 bg-[#ff4a1c] rounded-full"></span> Live Network
                 </span>
-                <Link to="/login" className="btn-cyber text-[#f4f4f5] font-semibold text-sm px-6 py-2.5 uppercase tracking-wide">Join Roster</Link>
+                <Link to="/login" className="btn-cyber-ghost text-[#f4f4f5] font-semibold text-sm px-6 py-2.5 uppercase tracking-wide">Sign In</Link>
+                <Link to="/login" state={{ isSignUp: true }} className="btn-cyber text-[#f4f4f5] font-semibold text-sm px-6 py-2.5 uppercase tracking-wide">Sign Up</Link>
               </>
             )}
           </div>
@@ -259,9 +309,9 @@ function AppContent() {
         {isMobileMenuOpen && (
           <div className="md:hidden absolute top-[4.5rem] left-0 w-full bg-[#0a0a0d] border-b border-[#22222f] p-6 flex flex-col gap-6 shadow-2xl">
             <div className="flex flex-col gap-4 font-mono text-sm uppercase text-[#8a8a98]">
-              <a href="/#intel" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-[#f4f4f5]">Intelligence</a>
-              <a href="/#dashboard" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-[#f4f4f5]">Platform</a>
-              <a href="/#manifesto" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-[#f4f4f5]">Manifesto</a>
+              <a href="/#memes" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-[#f4f4f5]">Memes</a>
+              <a href="/#app" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-[#f4f4f5]">App</a>
+              <a href="/#about" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-[#f4f4f5]">About</a>
             </div>
             
             <div className="h-[1px] bg-[#22222f] w-full"></div>
@@ -269,14 +319,22 @@ function AppContent() {
             <div className="flex flex-col gap-4">
               {user ? (
                 <>
-                  <div className="flex flex-col">
-                    <span className="font-mono text-[0.75rem] text-[#ff4a1c] uppercase tracking-widest leading-none mb-1 flex items-center gap-2">
-                        <span className="w-1.5 h-1.5 bg-[#ff4a1c] rounded-full animate-pulse"></span> OPERATOR_ONLINE
-                    </span>
-                    <span className="font-display font-bold text-sm text-[#f4f4f5] uppercase">{user.name || user.username}</span>
-                  </div>
-                  <button onClick={() => { handleLogout(); setIsMobileMenuOpen(false); }} className="btn-cyber-ghost text-center text-[0.65rem] px-4 py-3 uppercase tracking-widest font-mono text-[#8a8a98] hover:text-[#ff4a1c] w-full">
-                    Sign Out
+                  <button onClick={() => { setIsUserProfileOpen(true); setIsMobileMenuOpen(false); }} className="flex items-center gap-3 w-full text-left hover:bg-[#111116] p-2 rounded transition-colors">
+                    {user.photoURL ? (
+                      <img src={user.photoURL} alt="User Avatar" referrerPolicy="no-referrer" className="w-10 h-10 rounded-full border border-[#22222f] object-cover" />
+                    ) : (
+                      <div className="w-10 h-10 rounded-full border border-[#22222f] bg-[#111116] flex items-center justify-center text-[#f4f4f5]">
+                        {user.method === 'Google' ? <iconify-icon icon="logos:google-icon"></iconify-icon> :
+                         user.method === 'Facebook' ? <iconify-icon icon="logos:facebook"></iconify-icon> :
+                         <iconify-icon icon="solar:user-bold" width="18"></iconify-icon>}
+                      </div>
+                    )}
+                    <div className="flex flex-col">
+                      <span className="font-mono text-[0.75rem] text-[#ff4a1c] uppercase tracking-widest leading-none mb-1 flex items-center gap-2">
+                          <span className="w-1.5 h-1.5 bg-[#ff4a1c] rounded-full animate-pulse"></span> OPERATOR_ONLINE
+                      </span>
+                      <span className="font-display font-bold text-sm text-[#f4f4f5] uppercase">{user.name || user.username}</span>
+                    </div>
                   </button>
                 </>
               ) : (
@@ -284,7 +342,8 @@ function AppContent() {
                   <span className="font-mono text-[0.75rem] text-[#ff4a1c] animate-pulse uppercase tracking-widest flex items-center gap-2">
                     <span className="w-1.5 h-1.5 bg-[#ff4a1c] rounded-full"></span> Live Network
                   </span>
-                  <Link onClick={() => setIsMobileMenuOpen(false)} to="/login" className="btn-cyber flex items-center justify-center text-[#f4f4f5] font-semibold text-sm px-6 py-3 uppercase tracking-wide text-center w-full">Join Roster</Link>
+                  <Link onClick={() => setIsMobileMenuOpen(false)} to="/login" className="btn-cyber-ghost flex items-center justify-center text-[#f4f4f5] font-semibold text-sm px-6 py-3 uppercase tracking-wide text-center w-full">Sign In</Link>
+                  <Link onClick={() => setIsMobileMenuOpen(false)} to="/login" state={{ isSignUp: true }} className="btn-cyber flex items-center justify-center text-[#f4f4f5] font-semibold text-sm px-6 py-3 uppercase tracking-wide text-center w-full">Sign Up</Link>
                 </>
               )}
             </div>
@@ -301,9 +360,27 @@ function AppContent() {
         totalUsers={totalUsers}
       />
 
+      <UserProfileSidebar 
+        isOpen={isUserProfileOpen} 
+        onClose={() => setIsUserProfileOpen(false)} 
+        user={user}
+        onSignOut={handleLogout}
+        onSwitchAccount={() => setAuthModalConfig({ isOpen: true, message: 'Authenticate new user profile', onSuccess: null })}
+      />
+
+      <AuthModal 
+        isOpen={authModalConfig.isOpen}
+        onClose={() => setAuthModalConfig({ isOpen: false, message: '', onSuccess: null })}
+        message={authModalConfig.message}
+        onLoginSuccess={(userData) => {
+          handleLogin(userData);
+          if (authModalConfig.onSuccess) authModalConfig.onSuccess();
+        }}
+      />
+
       <Routes>
-        <Route path="/" element={<Home waveformHeights={waveformHeights} onSearch={addToHistory} history={searchHistory} user={user} />} />
-        <Route path="/results" element={<MemeResult user={user} />} />
+        <Route path="/" element={<Home waveformHeights={waveformHeights} onSearch={addToHistory} history={searchHistory} user={user} requireAuth={requireAuth} />} />
+        <Route path="/results" element={<MemeResult user={user} requireAuth={requireAuth} />} />
         <Route path="/login" element={<Login onLogin={handleLogin} />} />
         <Route path="/preview" element={<Preview user={user} />} />
       </Routes>
@@ -328,9 +405,9 @@ function AppContent() {
                   <path d="M2 23L16 30L30 23" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"></path>
                   <path d="M2 16L16 23L30 16" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"></path>
                 </svg>
-                <span className="font-display font-[800] text-lg tracking-tighter uppercase font-bold">NEXUS</span>
+                <span className="font-display font-[800] text-lg tracking-tighter uppercase font-bold">MEME SEARCH</span>
               </Link>
-              <p className="text-[#8a8a98] max-w-lg mb-6 leading-relaxed">The only AI intelligence stream engineered for operators, builders, and decision-makers. Execute with absolute clarity.</p>
+              <p className="text-[#8a8a98] max-w-lg mb-6 leading-relaxed">The ultimate meme search engine for creators, memers, and internet explorers. Find the perfect meme instantly.</p>
               <div className="flex gap-4">
                 <a href="#" className="w-8 h-8 rounded border border-[#22222f] flex items-center justify-center text-[#8a8a98] hover:text-[#ff4a1c] hover:border-[#ff4a1c] transition-colors"><iconify-icon icon="solar:twitter-linear"></iconify-icon></a>
                 <a href="#" className="w-8 h-8 rounded border border-[#22222f] flex items-center justify-center text-[#8a8a98] hover:text-[#ff4a1c] hover:border-[#ff4a1c] transition-colors"><iconify-icon icon="solar:play-circle-linear"></iconify-icon></a>
@@ -339,11 +416,11 @@ function AppContent() {
             </div>
 
             <div>
-              <h5 className="text-[#f4f4f5] uppercase tracking-wider mb-4 border-b border-[#22222f] pb-2 font-bold">Platform</h5>
+              <h5 className="text-[#f4f4f5] uppercase tracking-wider mb-4 border-b border-[#22222f] pb-2 font-bold">App</h5>
               <ul className="flex flex-col gap-3 text-[#8a8a98]">
                 <li><Link to="/results" className="hover:text-[#ff4a1c] transition-colors">Meme Archives</Link></li>
                 <li><a href="#" className="hover:text-[#ff4a1c] transition-colors">Data Matrix</a></li>
-                <li><a href="#" className="hover:text-[#ff4a1c] transition-colors">Manifesto</a></li>
+                <li><a href="#" className="hover:text-[#ff4a1c] transition-colors">About</a></li>
                 <li><a href="#" className="hover:text-[#ff4a1c] transition-colors">Sponsorships</a></li>
               </ul>
             </div>
@@ -361,7 +438,7 @@ function AppContent() {
           </div>
 
           <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center pt-8 border-t border-[#22222f] text-[#22222f] text-sm">
-            <p>© {new Date().getFullYear()} NEXUS INTELLIGENCE. ALL RIGHTS RESERVED.</p>
+            <p>© {new Date().getFullYear()} MEME SEARCH. ALL RIGHTS RESERVED.</p>
             <p>DESIGNED FOR THE BUILDERS.</p>
           </div>
         </footer>

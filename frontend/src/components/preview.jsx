@@ -34,7 +34,7 @@ export default function Preview({ user }) {
       const a = document.createElement('a');
       a.href = url;
       // Get filename from key or title
-      const filename = meme.id.split('/').pop() || `nexus_artifact_${Date.now()}`;
+      const filename = meme.id.split('/').pop() || `meme_artifact_${Date.now()}`;
       a.download = filename;
       document.body.appendChild(a);
       a.click();
@@ -122,7 +122,7 @@ export default function Preview({ user }) {
           </div>
           
           <div className="bg-[#0a0a0d] border border-[#22222f] p-4 text-[#8a8a98] font-mono text-[0.6rem] uppercase tracking-widest leading-relaxed">
-            <p className="mb-2"><span className="text-[#ff4a1c]">WARNING:</span> Unauthorized distribution of tactical intelligence is strictly prohibited by central command.</p>
+            <p className="mb-2"><span className="text-[#ff4a1c]">WARNING:</span> Unauthorized distribution of memes is strictly prohibited by central command.</p>
             <p>Clearance Level: <span className="text-[#f4f4f5]">OPERATOR</span></p>
           </div>
         </div>
