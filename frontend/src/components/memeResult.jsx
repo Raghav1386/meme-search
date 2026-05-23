@@ -38,7 +38,8 @@ export default function MemeResult({ user }) {
     const fetchMemes = async () => {
       setLoading(true);
       try {
-        const res = await fetch(`/api/search?q=${encodeURIComponent(query)}&format=${activeFilter}`);
+        const apiUrl = import.meta.env.VITE_API_URL || '';
+        const res = await fetch(`${apiUrl}/api/search?q=${encodeURIComponent(query)}&format=${activeFilter}`);
         if (!res.ok) throw new Error('Failed to fetch memes');
         const data = await res.json();
         
