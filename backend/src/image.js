@@ -23,7 +23,9 @@ export const streamB2Image = async (req, res) => {
     if (!key) return res.status(400).send('Missing key');
 
     const auth = await authorizeB2();
-    const url = `${auth.downloadUrl}/file/${process.env.B2_BUCKET_NAME}/${key}`;
+    // Encode the key parts but keep the slashes so Backblaze can find the folders
+    const encodedKey = key.split('/').map(encodeURIComponent).join('/');
+    const url = `${auth.downloadUrl}/file/${process.env.B2_BUCKET_NAME}/${encodedKey}`;
     
     const response = await axios.get(url, {
       headers: { Authorization: auth.authorizationToken },
