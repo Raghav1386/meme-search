@@ -1,10 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup } from 'firebase/auth';
+import { doc, setDoc } from 'firebase/firestore';
+import { auth, googleProvider, facebookProvider, db } from '../firebase';
 
 export default function Login({ onLogin }) {
   const navigate = useNavigate();
   const [isLogin, setIsLogin] = useState(true);
   const [isAuthenticating, setIsAuthenticating] = useState(false);
+  const [errorMsg, setErrorMsg] = useState(null);
   const [formData, setFormData] = useState({
     username: '',
     password: '',
@@ -25,41 +29,80 @@ export default function Login({ onLogin }) {
   };
 
   const handleLoginSuccess = (user) => {
-    setIsAuthenticating(true);
-    // Simulate network delay
-    setTimeout(() => {
-      onLogin(user);
-      const pendingSearch = localStorage.getItem('pending_search_query');
-      if (pendingSearch) {
-        localStorage.removeItem('pending_search_query');
-        navigate(`/results?q=${encodeURIComponent(pendingSearch)}`);
-      } else {
-        navigate('/');
-      }
-    }, 1500);
-  };
+    // Save minimal user profile for user counting in the background
+    if (user && user.uid) {
+      setDoc(doc(db, 'users', user.uid), {
+        email: user.username || null,
+        name: user.name || null,
+        loginMethod: user.method || 'Unknown',
+        lastLogin: new Date().toISOString()
+      }, { merge: true }).catch(e => console.error("Error saving user profile:", e));
+    }
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (isLogin) {
-      handleLoginSuccess({ 
-        username: formData.username || 'OPERATOR_01', 
-        name: formData.username || 'ANONYMOUS' 
-      });
+    onLogin(user);
+    const pendingSearch = localStorage.getItem('pending_search_query');
+    if (pendingSearch) {
+      localStorage.removeItem('pending_search_query');
+      navigate(`/results?q=${encodeURIComponent(pendingSearch)}`);
     } else {
-      handleLoginSuccess({ 
-        username: formData.username, 
-        name: formData.username,
-        email: formData.email 
-      });
+      navigate('/');
     }
   };
 
-  const handleSocialLogin = (platform) => {
-    handleLoginSuccess({ 
-      username: `${platform}_USER`, 
-      name: `${platform} Operator` 
-    });
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setErrorMsg(null);
+    setIsAuthenticating(true);
+    try {
+      if (isLogin) {
+        // We use username as the email address during login for Firebase
+        const userCredential = await signInWithEmailAndPassword(auth, formData.username, formData.password);
+        handleLoginSuccess({ 
+          username: userCredential.user.email, 
+          name: userCredential.user.displayName || formData.username,
+          uid: userCredential.user.uid,
+          method: 'Email'
+        });
+      } else {
+        const userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
+        handleLoginSuccess({ 
+          username: formData.username, 
+          name: formData.username,
+          email: formData.email,
+          uid: userCredential.user.uid,
+          method: 'Email'
+        });
+      }
+    } catch (err) {
+      console.error("Auth Error:", err);
+      if (err.code === 'auth/email-already-in-use') {
+        setErrorMsg("THIS EMAIL IS ALREADY REGISTERED. PLEASE SWITCH TO 'SIGN IN'.");
+      } else if (err.code === 'auth/invalid-credential') {
+        setErrorMsg("INCORRECT EMAIL OR PASSWORD.");
+      } else if (err.code === 'auth/weak-password') {
+        setErrorMsg("PASSWORD IS TOO WEAK (MUST BE AT LEAST 6 CHARACTERS).");
+      } else {
+        setErrorMsg(err.message);
+      }
+      setIsAuthenticating(false);
+    }
+  };
+
+  const handleSocialLogin = async (platform) => {
+    setErrorMsg(null);
+    try {
+      const provider = platform === 'Google' ? googleProvider : facebookProvider;
+      const userCredential = await signInWithPopup(auth, provider);
+      handleLoginSuccess({ 
+        username: userCredential.user.email, 
+        name: userCredential.user.displayName,
+        uid: userCredential.user.uid,
+        method: platform
+      });
+    } catch (err) {
+      console.error("Social Auth Error:", err);
+      setErrorMsg(err.message);
+    }
   };
 
   return (
@@ -171,6 +214,11 @@ export default function Login({ onLogin }) {
                     <div className="absolute bottom-0 right-0 w-3 h-3 bg-[#ff4a1c]/20 pointer-events-none transition-colors group-focus-within:bg-[#ff4a1c]/40"></div>
                   </div>
                 </div>
+                {errorMsg && (
+                  <div className="text-[#ff4a1c] text-xs font-mono uppercase tracking-widest bg-[#ff4a1c]/10 border border-[#ff4a1c]/20 p-3 rounded-sm">
+                    {errorMsg}
+                  </div>
+                )}
 
                 <button type="submit" className="btn-cyber w-full py-4 text-xs font-[900] text-white uppercase tracking-[0.25em] shadow-[0_0_20px_rgba(255,74,28,0.2)]">
                   {isLogin ? 'Execute Authentication' : 'Create Intelligence Profile'}

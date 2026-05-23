@@ -1,5 +1,7 @@
 import React, { useEffect, useMemo, useState, memo } from 'react';
 import { BrowserRouter, Routes, Route, Link, useLocation } from 'react-router-dom';
+import { doc, getDoc, setDoc, collection, getCountFromServer } from 'firebase/firestore';
+import { db } from './firebase';
 import BackgroundCanvas from './components/BackgroundCanvas';
 import MemeResult from './components/memeResult';
 import Login from './components/login';
@@ -78,15 +80,43 @@ function AppContent() {
   const [user, setUser] = useState(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [searchHistory, setSearchHistory] = useState(() => {
-    try {
-      const saved = localStorage.getItem('nexus_search_history');
-      return saved ? JSON.parse(saved) : [];
-    } catch (e) {
-      console.error('Core Telemetry Error:', e);
-      return [];
-    }
-  });
+  const [searchHistory, setSearchHistory] = useState([]);
+  const [totalUsers, setTotalUsers] = useState(0);
+
+  // Fetch Total Users
+  useEffect(() => {
+    const fetchTotalUsers = async () => {
+      try {
+        const coll = collection(db, 'users');
+        const snapshot = await getCountFromServer(coll);
+        setTotalUsers(snapshot.data().count);
+      } catch (err) {
+        console.error("Error fetching user count:", err);
+      }
+    };
+    fetchTotalUsers();
+  }, [user]);
+
+  useEffect(() => {
+    const fetchHistory = async () => {
+      if (user && user.uid) {
+        try {
+          const docRef = doc(db, 'users', user.uid);
+          const docSnap = await getDoc(docRef);
+          if (docSnap.exists() && docSnap.data().searchHistory) {
+            setSearchHistory(docSnap.data().searchHistory);
+          } else {
+            setSearchHistory([]);
+          }
+        } catch (err) {
+          console.error("Firestore read error:", err);
+        }
+      } else {
+        setSearchHistory([]);
+      }
+    };
+    fetchHistory();
+  }, [user]);
 
   const handleLogin = (userData) => {
     setUser(userData);
@@ -100,15 +130,34 @@ function AppContent() {
     setUser(null);
   };
 
-  const addToHistory = (query) => {
+  const addToHistory = async (query) => {
+    const newEntry = { id: Date.now(), query, timestamp: new Date().toLocaleTimeString(), strength: Math.floor(Math.random() * 40) + 60 };
+    let updatedHistory = [];
     setSearchHistory(prev => {
-      const newHistory = [
-        { id: Date.now(), query, timestamp: new Date().toLocaleTimeString(), strength: Math.floor(Math.random() * 40) + 60 },
-        ...prev.filter(h => h.query !== query)
-      ].slice(0, 10);
-      localStorage.setItem('nexus_search_history', JSON.stringify(newHistory));
-      return newHistory;
+      updatedHistory = [newEntry, ...prev.filter(h => h.query !== query)].slice(0, 10);
+      return updatedHistory;
     });
+
+    if (user && user.uid) {
+      try {
+        const docRef = doc(db, 'users', user.uid);
+        await setDoc(docRef, { searchHistory: updatedHistory }, { merge: true });
+      } catch (err) {
+        console.error("Firestore write error:", err);
+      }
+    }
+  };
+
+  const clearHistory = async () => {
+    setSearchHistory([]);
+    if (user && user.uid) {
+       try {
+         const docRef = doc(db, 'users', user.uid);
+         await setDoc(docRef, { searchHistory: [] }, { merge: true });
+       } catch (err) {
+         console.error("Firestore write error:", err);
+       }
+    }
   };
 
   // Waveform heights memoized to prevent flicker on re-renders
@@ -247,11 +296,9 @@ function AppContent() {
         isOpen={isSidebarOpen} 
         onClose={() => setIsSidebarOpen(false)} 
         history={searchHistory}
-        onClearHistory={() => {
-          setSearchHistory([]);
-          localStorage.removeItem('nexus_search_history');
-        }}
+        onClearHistory={clearHistory}
         user={user}
+        totalUsers={totalUsers}
       />
 
       <Routes>

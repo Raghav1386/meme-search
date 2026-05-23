@@ -26,8 +26,28 @@ These are required for the build process, styling (Tailwind CSS), and the Vite d
 npm install -D @vitejs/plugin-react autoprefixer postcss tailwindcss vite @types/react @types/react-dom
 ```
 
-**Step 3: Run the Development Server**
+**Step 3: Run the Frontend Development Server**
 Start the frontend application locally using Vite:
 ```bash
+cd frontend
 npm run dev
+```
+
+**Step 4: Run the Backend API Server**
+Start the Node.js backend server:
+```bash
+cd backend
+npm run dev
+```
+
+**Step 5: Run the Python Embedding Worker**
+Start the FastAPI worker for clip embeddings (runs on port 8000):
+```bash
+cd backend/worker
+uvicorn test:app --host 127.0.0.1 --port 8000
+```
+
+Alternatively, you can run all of them at the same time with a single command from the root directory:
+```bash
+npx concurrently "npm --prefix frontend run dev" "npm --prefix backend run dev" "cd backend/worker && uvicorn test:app --host 127.0.0.1 --port 8000"
 ```

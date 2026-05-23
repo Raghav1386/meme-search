@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-export default function Sidebar({ isOpen, onClose, history, onClearHistory, user }) {
+export default function Sidebar({ isOpen, onClose, history, onClearHistory, user, totalUsers }) {
   return (
     <AnimatePresence>
       {isOpen && (
@@ -151,7 +151,10 @@ export default function Sidebar({ isOpen, onClose, history, onClearHistory, user
             {/* Footer info */}
             <div className="p-6 border-t border-[#22222f] bg-[#070709]">
               <div className="flex items-center justify-between mb-4">
-                <span className="font-mono text-[0.6rem] text-[#22222f] uppercase">Uptime: 1,482 Hours</span>
+                <span className="font-mono text-[0.6rem] text-[#8a8a98] uppercase flex items-center gap-2">
+                  <iconify-icon icon="solar:users-group-rounded-bold" width="14" className="text-[#ff4a1c]"></iconify-icon>
+                  <span className="text-[#f4f4f5] font-bold">{totalUsers > 0 ? totalUsers : '--'}</span> Operators
+                </span>
                 <span className="font-mono text-[0.5rem] text-[#22222f] uppercase">v0.9.4-alpha</span>
               </div>
               <button className="w-full py-3 border border-[#22222f] text-[#8a8a98] font-mono text-[0.7rem] uppercase tracking-widest hover:bg-[#111116] transition-all">
