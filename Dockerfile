@@ -14,6 +14,10 @@ RUN pip install --no-cache-dir torch torchvision --index-url https://download.py
 # Install the rest of the requirements
 RUN pip install --no-cache-dir -r requirements_clean.txt
 
+# Pre-download the HuggingFace model weights into the Docker image
+# This prevents the server from timing out on startup while downloading 600MB of weights
+RUN python -c "from transformers import CLIPProcessor, CLIPModel; CLIPModel.from_pretrained('openai/clip-vit-base-patch32'); CLIPProcessor.from_pretrained('openai/clip-vit-base-patch32')"
+
 # Copy the python worker files
 COPY backend/worker ./backend/worker
 
