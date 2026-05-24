@@ -138,11 +138,20 @@ function AppContent() {
         try {
           const docRef = doc(db, 'users', user.uid);
           const docSnap = await getDoc(docRef);
-          if (docSnap.exists() && docSnap.data().searchHistory) {
-            setSearchHistory(docSnap.data().searchHistory);
-          } else {
-            setSearchHistory([]);
+          let history = [];
+          if (docSnap.exists() && Array.isArray(docSnap.data().searchHistory)) {
+            history = docSnap.data().searchHistory;
           }
+          
+          const pendingSearch = localStorage.getItem('pending_search_query');
+          if (pendingSearch) {
+            const newEntry = { id: Date.now(), query: pendingSearch, timestamp: new Date().toLocaleTimeString(), strength: Math.floor(Math.random() * 40) + 60 };
+            history = [newEntry, ...history.filter(h => h.query !== pendingSearch)].slice(0, 10);
+            await setDoc(docRef, { searchHistory: history }, { merge: true });
+            localStorage.removeItem('pending_search_query');
+          }
+
+          setSearchHistory(history);
         } catch (err) {
           console.error("Firestore read error:", err);
         }
@@ -155,10 +164,6 @@ function AppContent() {
 
   const handleLogin = (userData) => {
     setUser(userData);
-    const pendingSearch = localStorage.getItem('pending_search_query');
-    if (pendingSearch) {
-      addToHistory(pendingSearch);
-    }
   };
 
   const handleLogout = async () => {
@@ -173,16 +178,23 @@ function AppContent() {
 
   const addToHistory = async (query) => {
     const newEntry = { id: Date.now(), query, timestamp: new Date().toLocaleTimeString(), strength: Math.floor(Math.random() * 40) + 60 };
-    let updatedHistory = [];
-    setSearchHistory(prev => {
-      updatedHistory = [newEntry, ...prev.filter(h => h.query !== query)].slice(0, 10);
-      return updatedHistory;
-    });
-
-    if (user && user.uid) {
+    
+    // Optimistic UI update
+    setSearchHistory(prev => [newEntry, ...prev.filter(h => h.query !== query)].slice(0, 10));
+    
+    // Remote database update
+    const uid = auth.currentUser?.uid || (user && user.uid);
+    if (uid) {
       try {
-        const docRef = doc(db, 'users', user.uid);
-        await setDoc(docRef, { searchHistory: updatedHistory }, { merge: true });
+        const docRef = doc(db, 'users', uid);
+        const docSnap = await getDoc(docRef);
+        let remoteHistory = [];
+        if (docSnap.exists() && Array.isArray(docSnap.data().searchHistory)) {
+          remoteHistory = docSnap.data().searchHistory;
+        }
+        
+        const updatedRemoteHistory = [newEntry, ...remoteHistory.filter(h => h.query !== query)].slice(0, 10);
+        await setDoc(docRef, { searchHistory: updatedRemoteHistory }, { merge: true });
       } catch (err) {
         console.error("Firestore write error:", err);
       }
@@ -191,9 +203,10 @@ function AppContent() {
 
   const clearHistory = async () => {
     setSearchHistory([]);
-    if (user && user.uid) {
+    const currentUser = auth.currentUser;
+    if (currentUser) {
        try {
-         const docRef = doc(db, 'users', user.uid);
+         const docRef = doc(db, 'users', currentUser.uid);
          await setDoc(docRef, { searchHistory: [] }, { merge: true });
        } catch (err) {
          console.error("Firestore write error:", err);
@@ -380,7 +393,7 @@ function AppContent() {
 
       <Routes>
         <Route path="/" element={<Home waveformHeights={waveformHeights} onSearch={addToHistory} history={searchHistory} user={user} requireAuth={requireAuth} />} />
-        <Route path="/results" element={<MemeResult user={user} requireAuth={requireAuth} />} />
+        <Route path="/results" element={<MemeResult user={user} requireAuth={requireAuth} onSearch={addToHistory} />} />
         <Route path="/login" element={<Login onLogin={handleLogin} />} />
         <Route path="/preview" element={<Preview user={user} />} />
       </Routes>

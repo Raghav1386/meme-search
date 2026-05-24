@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useLocation, Link, useNavigate } from 'react-router-dom';
 import Filter from './filter';
 
-export default function MemeResult({ user, requireAuth }) {
+export default function MemeResult({ user, requireAuth, onSearch }) {
   const [memes, setMemes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState('all');
@@ -21,12 +21,17 @@ export default function MemeResult({ user, requireAuth }) {
     if (!searchInputValue.trim()) return;
     
     if (!user) {
+      localStorage.setItem('pending_search_query', searchInputValue);
       requireAuth('Authentication Required to Search', () => {
+        if (onSearch) onSearch(searchInputValue);
         navigate(`/results?q=${encodeURIComponent(searchInputValue)}`);
+        localStorage.removeItem('pending_search_query');
       });
       return;
     }
 
+    if (onSearch) onSearch(searchInputValue);
+    localStorage.removeItem('pending_search_query');
     navigate(`/results?q=${encodeURIComponent(searchInputValue)}`);
   };
 
@@ -70,9 +75,9 @@ export default function MemeResult({ user, requireAuth }) {
     <div className="pt-32 pb-20 min-h-screen relative z-10">
       
       {/* HEADER SECTION */}
-      <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 mb-12 flex flex-col md:flex-row justify-between items-end gap-6 reveal active">
-        <div>
-          <div className="flex items-center gap-3 font-mono text-[0.65rem] text-[#ff4a1c] mb-3 uppercase tracking-widest">
+      <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 mb-12 flex flex-col md:flex-row justify-between items-center md:items-end gap-6 text-center md:text-left reveal active">
+        <div className="w-full md:w-auto flex flex-col items-center md:items-start">
+          <div className="flex items-center justify-center md:justify-start gap-3 font-mono text-[0.65rem] text-[#ff4a1c] mb-3 uppercase tracking-widest w-full">
             <span className="w-2 h-2 bg-[#ff4a1c] animate-pulse"></span>
             <span>Meme Database // query: {query}</span>
           </div>
@@ -81,14 +86,17 @@ export default function MemeResult({ user, requireAuth }) {
           </h1>
 
           {/* LOCAL SEARCH BAR */}
-          <form onSubmit={handleLocalSearch} className="flex flex-col sm:flex-row w-full max-w-[32rem] relative group gap-3 sm:gap-0 mb-6">
+          <form onSubmit={handleLocalSearch} className="flex flex-col sm:flex-row w-full max-w-[32rem] mx-auto md:mx-0 relative group gap-3 sm:gap-0 mb-6">
             <div className="flex-1 relative border border-[#22222f] bg-[#0a0a0d]/60 backdrop-blur-xl p-1 group-focus-within:border-[#ff4a1c]/60 transition-all duration-300 flex items-center" style={{ clipPath: 'polygon(0 0, 100% 0, 100% calc(100% - 0.75rem), calc(100% - 0.75rem) 100%, 0 100%)' }}>
               <iconify-icon icon="solar:minimalistic-magnifer-linear" width="20" className="text-[#8a8a98] ml-4 group-focus-within:text-[#ff4a1c]"></iconify-icon>
               <input 
                 type="text" 
                 placeholder="UPDATE_QUERY..." 
                 value={searchInputValue}
-                onChange={(e) => setSearchInputValue(e.target.value)}
+                onChange={(e) => {
+                  setSearchInputValue(e.target.value);
+                  if (!user) localStorage.setItem('pending_search_query', e.target.value);
+                }}
                 className="w-full bg-transparent px-4 py-3 text-sm font-mono text-[#f4f4f5] placeholder:text-[#22222f] focus:outline-none focus:ring-0" 
               />
             </div>
@@ -98,10 +106,12 @@ export default function MemeResult({ user, requireAuth }) {
           </form>
           
           {/* FORMAT FILTER */}
-          <Filter activeFilter={activeFilter} setFilter={setActiveFilter} />
+          <div className="flex justify-center md:justify-start w-full">
+            <Filter activeFilter={activeFilter} setFilter={setActiveFilter} />
+          </div>
         </div>
         
-        <div className="flex gap-4 font-mono text-[0.6rem]">
+        <div className="flex gap-4 font-mono text-[0.6rem] justify-center md:justify-end w-full md:w-auto">
           <div className="px-4 py-2 bg-[#111116] border border-[#22222f] text-[#8a8a98]">
             STATUS: <span className="text-[#ff4a1c]">MEMES_FOUND</span>
           </div>
@@ -178,7 +188,7 @@ export default function MemeResult({ user, requireAuth }) {
         )}
       </div>
 
-      <span className="accoutrement-coord" style={{ top: '10rem', left: '2rem' }}>SEC.RESULT_VIEW</span>
+      <span className="accoutrement-coord top-[4rem] left-1/2 -translate-x-1/2 md:translate-x-0 md:top-[10rem] md:left-[2rem]">SEC.RESULT_VIEW</span>
     </div>
   );
 }

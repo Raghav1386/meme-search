@@ -10,16 +10,19 @@ export default function MemeSearch({ onSearch, user, requireAuth }) {
     if (!searchQuery.trim()) return;
     
     if (!user) {
+      localStorage.setItem('pending_search_query', searchQuery);
       requireAuth('Authentication Required to Search', () => {
         if (onSearch) onSearch(searchQuery);
         navigate(`/results?q=${encodeURIComponent(searchQuery)}`);
         setSearchQuery('');
+        localStorage.removeItem('pending_search_query');
       });
       return;
     }
 
     // Navigating to the results page with the query
     if (onSearch) onSearch(searchQuery);
+    localStorage.removeItem('pending_search_query');
     navigate(`/results?q=${encodeURIComponent(searchQuery)}`);
     setSearchQuery('');
   };
@@ -35,7 +38,10 @@ export default function MemeSearch({ onSearch, user, requireAuth }) {
               type="text" 
               placeholder="ENTER_MEME_PARAMETERS..." 
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                if (!user) localStorage.setItem('pending_search_query', e.target.value);
+              }}
               className="w-full bg-transparent px-6 py-6 md:py-8 text-lg md:text-xl font-mono text-[#f4f4f5] placeholder:text-[#22222f] focus:outline-none focus:ring-0" 
             />
           </div>

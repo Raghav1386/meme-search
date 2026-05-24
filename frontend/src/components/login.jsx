@@ -44,7 +44,6 @@ export default function Login({ onLogin, isModal = false }) {
     if (!isModal) {
       const pendingSearch = localStorage.getItem('pending_search_query');
       if (pendingSearch) {
-        localStorage.removeItem('pending_search_query');
         navigate(`/results?q=${encodeURIComponent(pendingSearch)}`);
       } else {
         navigate('/');
