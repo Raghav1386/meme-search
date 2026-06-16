@@ -7,6 +7,9 @@ app = FastAPI()
 model = CLIPModel.from_pretrained("openai/clip-vit-base-patch32")
 processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32")
 
+@app.get("/health")
+def health():
+    return {"status": "ok"}
 
 @app.get("/embed")
 def embed(query: str):
