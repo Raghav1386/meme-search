@@ -7,3 +7,5 @@ Pillow
 python-dotenv
 fastapi
 uvicorn
+easyocr
+

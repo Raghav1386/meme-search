@@ -93,6 +93,13 @@ export default function Preview({ user }) {
             <h1 className="font-display font-[800] text-xl md:text-2xl text-[#f4f4f5] tracking-tight uppercase mb-4 break-words">
               {meme.title.split('/').pop() || meme.id}
             </h1>
+
+            {meme.ocr_text && (
+              <div className="mb-6 p-3 bg-[#070709] border border-[#22222f] rounded-sm">
+                <span className="font-mono text-[0.6rem] text-[#ff4a1c] block uppercase mb-1">In-Image Text (OCR):</span>
+                <p className="font-mono text-xs text-[#f4f4f5] leading-relaxed break-words">{meme.ocr_text}</p>
+              </div>
+            )}
             
             <div className="flex flex-wrap gap-2 mb-8">
               {meme.tags && meme.tags.map(tag => (

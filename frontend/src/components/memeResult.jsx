@@ -52,6 +52,8 @@ export default function MemeResult({ user, requireAuth, onSearch }) {
         const formattedMemes = data.map(m => ({
           id: m.b2_key,
           title: m.caption || m.b2_key,
+          caption: m.caption || '',
+          ocr_text: m.ocr_text || '',
           url: m.url.startsWith('http') ? m.url : `${apiUrl}${m.url}`,
           tags: m.format ? [m.format] : [],
           format: m.format

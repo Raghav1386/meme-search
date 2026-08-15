@@ -12,31 +12,19 @@ const pool = new Pool({
   },
 });
 
-export const queryMemes = async (embedding, format) => {
+export const queryMemes = async (queryText, embedding, format) => {
   try {
-    let result;
-    if (format && format !== 'all') {
-      result = await pool.query(
-        `
-        SELECT b2_key, caption, format
-        FROM memes
-        WHERE format = $2
-        ORDER BY embedding <=> $1::vector
-        LIMIT 12;
-        `,
-        [JSON.stringify(embedding), format]
-      );
-    } else {
-      result = await pool.query(
-        `
-        SELECT b2_key, caption, format
-        FROM memes
-        ORDER BY embedding <=> $1::vector
-        LIMIT 12;
-        `,
-        [JSON.stringify(embedding)]
-      );
-    }
+    const filterFormat = format && format !== 'all' ? format : null;
+    const vectorParam = embedding && Array.isArray(embedding) ? JSON.stringify(embedding) : null;
+    const textParam = queryText && typeof queryText === 'string' && queryText.trim() ? queryText.trim() : null;
+
+    const result = await pool.query(
+      `
+      SELECT id, b2_key, caption, ocr_text, format, score
+      FROM match_memes_hybrid($1, $2::vector, 12, $3);
+      `,
+      [textParam, vectorParam, filterFormat]
+    );
 
     return result.rows;
   } catch (err) {
