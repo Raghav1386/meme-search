@@ -4,7 +4,6 @@ import dotenv from "dotenv";
 import { initializeDB } from "./db.js";
 
 // Routes
-import imageRoute from "./image.js";
 import searchRoute from "./search.js";
 
 dotenv.config();
