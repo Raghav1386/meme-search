@@ -1,7 +1,6 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
-import { initializeDB } from "./db.js";
 
 // Routes
 import searchRoute from "./search.js";
@@ -12,9 +11,6 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 app.use(cors());
-
-// Wait for DB to be ready
-await initializeDB();
 app.use(express.json());
 
 app.use("/api/search", searchRoute);
