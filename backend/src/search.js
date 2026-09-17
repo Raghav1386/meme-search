@@ -1,6 +1,7 @@
 import express from "express";
 import { getEmbedding } from "./embed.js";
 import { queryMemes } from "./db.js";
+import { searchIngestionMemes } from "./ingestion.js";
 
 const router = express.Router();
 
@@ -21,18 +22,38 @@ router.get("/", async (req, res) => {
       console.warn("Embedding service unavailable, falling back to text search:", embedErr.message);
     }
 
-    // 2. Search DB (Hybrid Search combining query text + vector embedding)
-    const memes = await queryMemes(query, embedding, format);
+    // 2. Search DBs (Federated search with graceful fallback)
+    const memesPromise = queryMemes(query, embedding, format);
+    const ingestionMemesPromise = searchIngestionMemes(query, format).catch((err) => {
+      console.warn("Ingestion DB search failed, but gracefully continuing:", err.message);
+      return [];
+    });
 
-    // 3. Attach Proxy URLs for images and format response
-    const results = memes.map((m) => ({
+    const [memes, ingestionMemes] = await Promise.all([memesPromise, ingestionMemesPromise]);
+
+    // 3. Attach Proxy URLs for images, add discriminators, and merge
+    const existingResults = memes.map((m) => ({
       ...m,
       caption: m.caption || "",
       ocr_text: m.ocr_text || "",
       url: `/api/image?key=${encodeURIComponent(m.b2_key)}`,
+      result_type: 'meme',
+      ingested_at: m.created_at
     }));
 
-    res.json(results);
+    const ingestionResults = ingestionMemes.map((m) => ({
+      ...m,
+      caption: m.caption || "",
+      ocr_text: m.ocr_text || "",
+      url: `/api/image?key=${encodeURIComponent(m.b2_key)}`,
+      platform: m.source,
+      result_type: 'ingestion'
+    }));
+
+    // Combine and sort by the normalized scores
+    const combinedResults = [...ingestionResults, ...existingResults].sort((a, b) => b.score - a.score);
+
+    res.json(combinedResults);
   } catch (err) {
     console.error("FULL ERROR:", err);
     res.status(500).json({

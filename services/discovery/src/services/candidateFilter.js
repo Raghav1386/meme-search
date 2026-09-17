@@ -1,31 +1,77 @@
 import config from '../config/index.js';
 
 export function filterCandidate(candidate) {
-  // Check if trend_score is present, numeric, finite, and not negative
+  const threshold = config.TREND_MIN_SCORE;
+  const trend_score = candidate.trend_score;
+
+  // Check if trend_score is present, numeric, finite, not negative, and not > 100
   if (
-    candidate.trend_score === undefined ||
-    candidate.trend_score === null ||
-    typeof candidate.trend_score !== 'number' ||
-    isNaN(candidate.trend_score) ||
-    !isFinite(candidate.trend_score) ||
-    candidate.trend_score < 0
+    trend_score === undefined ||
+    trend_score === null ||
+    typeof trend_score !== 'number' ||
+    isNaN(trend_score) ||
+    !isFinite(trend_score) ||
+    trend_score < 0 ||
+    trend_score > 100
   ) {
     return {
-      passed: false,
-      reason: 'invalid_trend_score'
+      accepted: false,
+      reason: 'invalid_trend_score',
+      trend_score,
+      threshold
     };
   }
 
+  // Check 72-hour rolling window
+  if (candidate.published_at) {
+    const ageMs = Date.now() - new Date(candidate.published_at).getTime();
+    const maxAgeMs = config.DISCOVERY_REDDIT_BACKFILL_HOURS * 3600 * 1000;
+    if (ageMs > maxAgeMs) {
+       return {
+         accepted: false,
+         reason: 'expired_recent_window',
+         trend_score,
+         threshold
+       };
+    }
+  }
+
+  // Early Media Filtering (Image-Only Enforcement)
+  if (config.DISCOVERY_IMAGE_ONLY) {
+    const mediaType = candidate.metadata?.media_type || 'unknown';
+    if (mediaType === 'video') {
+       return { accepted: false, reason: 'media_type_video', trend_score, threshold };
+    }
+    if (mediaType === 'audio') {
+       return { accepted: false, reason: 'media_type_audio', trend_score, threshold };
+    }
+    if (mediaType === 'text') {
+       return { accepted: false, reason: 'media_type_text', trend_score, threshold };
+    }
+    if (candidate.platform === 'youtube') {
+       return { accepted: false, reason: 'media_type_video', trend_score, threshold };
+    }
+  } else {
+    // Old logic fallback
+    if (candidate.metadata && candidate.metadata.is_video === true) {
+       return { accepted: false, reason: 'unsupported_media_video', trend_score, threshold };
+    }
+  }
+
   // Check against minimum configuration threshold
-  if (candidate.trend_score < config.TREND_MIN_SCORE) {
+  if (trend_score < threshold) {
     return {
-      passed: false,
-      reason: 'below_min_trend_score'
+      accepted: false,
+      reason: 'trend_score_below_threshold',
+      trend_score,
+      threshold
     };
   }
 
   return {
-    passed: true,
-    reason: null
+    accepted: true,
+    reason: 'trend_score_above_threshold',
+    trend_score,
+    threshold
   };
 }

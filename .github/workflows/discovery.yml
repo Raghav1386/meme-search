@@ -1,0 +1,37 @@
+name: Run Meme Discovery
+
+on:
+  schedule:
+    - cron: '0 */6 * * *' # Runs every 6 hours
+  workflow_dispatch: # Allows manual trigger from GitHub UI
+
+jobs:
+  scrape-and-queue:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          
+      - name: Install Dependencies
+        working-directory: ./services/discovery
+        run: npm install
+        
+      - name: Run Discovery Script
+        working-directory: ./services/discovery
+        run: node src/run-once.js
+        env:
+          PORT: 3001
+          LOG_LEVEL: info
+          REDIS_URL: ${{ secrets.REDIS_URL }}
+          INGESTION_QUEUE_NAME: "meme-ingestion"
+          DISCOVERY_APIFY_REDDIT_ENABLED: "true"
+          APIFY_API_TOKEN: ${{ secrets.APIFY_API_TOKEN }}
+          APIFY_REDDIT_ACTOR: "harshmaur~reddit-scraper"
+          DISCOVERY_DATABASE_URL: ${{ secrets.DISCOVERY_DATABASE_URL }}
+          DISCOVERY_MIN_ACCEPTANCE_RATE: 0.70
+          DISCOVERY_REDDIT_COLLECTION_LIMIT: 300
+          DISCOVERY_MAX_DYNAMIC_QUERIES_PER_RUN: 3

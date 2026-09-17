@@ -4,26 +4,25 @@ import logger from '../utils/logger.js';
 
 const { Pool } = pkg;
 
-let pool = null;
+let ingestionPool = null;
 
 export function getDatabasePool() {
-  if (!pool) {
-    if (!config.DISCOVERY_DATABASE_URL) {
-      logger.warn('DISCOVERY_DATABASE_URL is not set. Database integration disabled.');
-      return null;
+  if (!ingestionPool) {
+    if (!config.INGESTION_DATABASE_URL) {
+      throw new Error('CRITICAL: INGESTION_DATABASE_URL is not set. Service cannot start.');
     }
-    pool = new Pool({
-      connectionString: config.DISCOVERY_DATABASE_URL,
-      ssl: config.DISCOVERY_DATABASE_URL.includes('sslmode=require') ? { rejectUnauthorized: false } : undefined
+    ingestionPool = new Pool({
+      connectionString: config.INGESTION_DATABASE_URL,
+      ssl: config.INGESTION_DATABASE_URL.includes('sslmode=require') ? { rejectUnauthorized: false } : undefined
     });
   }
-  return pool;
+  return ingestionPool;
 }
 
 export async function closeDatabasePool() {
-  if (pool) {
-    await pool.end();
-    pool = null;
-    logger.info('Database pool closed');
+  if (ingestionPool) {
+    await ingestionPool.end();
+    ingestionPool = null;
+    logger.info('Ingestion database pool closed');
   }
 }

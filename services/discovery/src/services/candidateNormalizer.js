@@ -43,7 +43,41 @@ export function normalizeCandidate(rawCandidate) {
       engagement = rawCandidate.engagement; // Let validator handle invalid types
   }
 
-  // 6. Return Normalized Object (Not yet instantiated as Candidate model to avoid constructor throws)
+  // 6. Metadata and Media Type Classification
+  const metadata = rawCandidate.metadata || {};
+  let media_type = 'unknown';
+
+  if (platform === 'youtube') {
+    media_type = 'video';
+  } else if (platform === 'reddit') {
+    if (metadata.is_video || metadata.post_hint === 'hosted:video' || metadata.post_hint === 'rich:video') {
+      media_type = 'video';
+    } else if (metadata.is_self) {
+      media_type = 'text';
+    } else if (metadata.post_hint === 'image') {
+      media_type = 'image';
+    } else if (metadata.domain) {
+      const d = metadata.domain.toLowerCase();
+      if (d.includes('youtube.com') || d.includes('youtu.be') || d.includes('v.redd.it')) {
+         media_type = 'video';
+      } else if (d.includes('spotify.com') || d.includes('soundcloud.com')) {
+         media_type = 'audio';
+      }
+    }
+    
+    // Check extensions as fallback
+    if (media_url && media_type === 'unknown') {
+      const lowUrl = media_url.toLowerCase();
+      if (/\.(mp4|webm|mov|avi|mkv|mpeg)($|\?)/.test(lowUrl)) media_type = 'video';
+      else if (/\.(mp3|wav|ogg|flac|m4a)($|\?)/.test(lowUrl)) media_type = 'audio';
+      else if (/\.(jpg|jpeg|png|webp|gif)($|\?)/.test(lowUrl)) media_type = 'image';
+    }
+  }
+
+  metadata.media_type = media_type;
+  metadata.engagement = engagement;
+
+  // 7. Return Normalized Object
   return {
     candidate_id,
     platform,
@@ -55,6 +89,7 @@ export function normalizeCandidate(rawCandidate) {
     creator,
     published_at,
     engagement,
+    metadata,
     discovered_at: new Date().toISOString()
   };
 }

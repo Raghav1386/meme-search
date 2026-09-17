@@ -1,51 +1,93 @@
-# Environment variables (Secrets)
+# ==========================================
+# 1. ENVIRONMENT VARIABLES & SECRETS
+# ==========================================
 .env
-.env.local
-.env.development
-.env.test
-.env.production
+.env.*
+!.env.example
 backend/.env
 frontend/.env
 services/discovery/.env
 services/ingestion/.env
+*.pem
+*.key
+*.cert
+*.cert.pem
+secrets.json
 
-# Local database and virtual environments
-*.sqlite3
-*.db
-venv/
-.venv/
-env/
-
-# Dependencies
+# ==========================================
+# 2. DEPENDENCIES
+# ==========================================
 node_modules/
 backend/node_modules/
 frontend/node_modules/
 services/discovery/node_modules/
 services/ingestion/node_modules/
+jspm_packages/
+.pnp
+.pnp.js
 
-# Build outputs
+# ==========================================
+# 3. BUILD OUTPUTS & CACHES
+# ==========================================
 dist/
 build/
+out/
 frontend/dist/
+frontend/build/
+.next/
+.nuxt/
+.vuepress/dist
+.cache/
+.parcel-cache/
+.eslintcache
+.stylelintcache
 
-# Python / Cache
+# ==========================================
+# 4. PYTHON & VIRTUAL ENVIRONMENTS
+# ==========================================
+venv/
+.venv/
+env/
 __pycache__/
-*.pyc
+*.py[cod]
+*$py.class
+*.so
+.Python
 backend/worker/__pycache__/
-backend/worker/_pycache__/test.cpython-311.pyc
-backend/worker/__pycache__/test.cpython-313.pyc
+.pytest_cache/
 
-# Project specific
+# ==========================================
+# 5. LOCAL DATABASES & MEDIA
+# ==========================================
+*.sqlite3
+*.sqlite
+*.db
 backend/memes/
 .kaggle/
-download_gifs.ps1/
 
-# OS generated files
-.DS_Store
-
-# Logs
+# ==========================================
+# 6. LOGS
+# ==========================================
+logs/
 *.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
+lerna-debug.log*
+
+# ==========================================
+# 7. IDEs & EDITORS (HIDDEN FILES)
+# ==========================================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db

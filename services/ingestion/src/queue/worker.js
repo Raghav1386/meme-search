@@ -1,226 +1,239 @@
 import { Worker } from 'bullmq';
 import { getRedisClient } from '../config/redis.js';
 import logger from '../utils/logger.js';
-import { acquireMedia } from '../services/mediaAcquisition.js';
-import { inspectMedia, UnsupportedMediaError, CorruptMediaError, DimensionLimitError, FileSizeLimitError } from '../services/mediaInspector.js';
-import { normalizeImage, NormalizationError, InputValidationError } from '../services/imageNormalizer.js';
-import { uploadCanonicalArtifact } from '../services/mediaStorage.js';
 import { getDatabasePool } from '../database/index.js';
+import { downloadMedia, DownloadError } from '../services/mediaDownloader.js';
+import { validateImage, ValidationError } from '../services/imageValidator.js';
+import { generateFilename } from '../utils/filenameGenerator.js';
+import { uploadToB2, StorageError } from '../services/b2Storage.js';
+import { indexMeme, IndexerError } from '../services/pythonIndexer.js';
+import { calculateSha256, calculatePhash, hammingDistance } from '../utils/hasher.js';
+import crypto from 'crypto';
 import config from '../config/index.js';
-import fs from 'fs/promises';
+
+const STATES = {
+  QUEUED: 0,
+  VALIDATING: 1,
+  DOWNLOADING: 2,
+  MEDIA_VALIDATED: 3,
+  HASHING: 4,
+  DEDUPLICATING: 5,
+  STORING: 6,
+  OCR: 7,
+  EMBEDDING: 8,
+  COMPLETED: 9,
+  FAILED: 10
+};
 
 let ingestionWorker = null;
+
+async function updateState(db, candidateId, status, extraFields = {}) {
+  const keys = Object.keys(extraFields);
+  if (keys.length === 0) {
+    await db.query('UPDATE ingestion_candidates SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE candidate_id = $2', [status, candidateId]);
+    return;
+  }
+  const setClauses = keys.map((k, i) => `${k} = $${i + 3}`).join(', ');
+  const values = [status, candidateId, ...keys.map(k => extraFields[k])];
+  await db.query(`UPDATE ingestion_candidates SET status = $1, updated_at = CURRENT_TIMESTAMP, ${setClauses} WHERE candidate_id = $2`, values);
+}
 
 export function initWorker() {
   if (!ingestionWorker) {
     const connection = getRedisClient();
-    const concurrency = parseInt(process.env.INGESTION_WORKER_CONCURRENCY || '2', 10);
+    const queueName = config.INGESTION_QUEUE_NAME || 'meme-ingestion-test';
+    const concurrency = parseInt(config.INGESTION_WORKER_CONCURRENCY || '1', 10);
 
-    ingestionWorker = new Worker('meme-ingestion', async (job) => {
-      const candidate = job.data;
-      
-      logger.info(`Worker started processing job`, {
-        jobId: job.id,
-        candidateId: candidate.candidate_id,
-        platform: candidate.platform
-      });
-
-      // Basic structure validation
-      if (!candidate || !candidate.platform || !candidate.platform_content_id) {
-        throw new Error('Invalid candidate structure: missing platform or platform_content_id');
-      }
-
-      if (!candidate.media_url) {
-        logger.info(`Candidate has no media_url, skipping acquisition`, { jobId: job.id });
-        return { status: 'skipped', reason: 'no_media_url' };
-      }
-
-      // Simulated controlled failure for testing purposes
-      if (candidate.platform === 'test-fail') {
-        throw new Error('Simulated processing failure for testing');
-      }
-
-      logger.info(`Candidate received and validated successfully, starting media acquisition`, { jobId: job.id });
-      
+    ingestionWorker = new Worker(queueName, async (job) => {
       const db = getDatabasePool();
-      const markPermanentFailure = async (reason) => {
-        if (db) {
-          await db.query(
-            'UPDATE discovery_candidates SET status = $1, error_reason = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3',
-            ['failed', reason, candidate.candidate_id]
-          ).catch(() => {});
-        }
-      };
+      const payload = job.data;
+      const candidateId = payload.candidate_id;
+
+      if (!payload || !payload.platform || !payload.candidate_id) {
+        throw new Error('Invalid candidate structure');
+      }
+
+      logger.info(`Worker started processing job`, { jobId: job.id, candidate_id: candidateId });
+
+      // 1. Candidate-level idempotency
+      let res = await db.query(
+        `INSERT INTO ingestion_candidates (candidate_id, platform, platform_content_id, source_media_url, caption, status) 
+         VALUES ($1, $2, $3, $4, $5, 'QUEUED') 
+         ON CONFLICT (candidate_id) DO NOTHING RETURNING *`,
+        [candidateId, payload.platform, payload.platform_content_id, payload.media_url, payload.caption]
+      );
       
-      const acqResult = await acquireMedia(candidate);
-      let normResult = null;
+      let candidateRow;
+      if (res.rows.length === 0) {
+        // Existed
+        res = await db.query('SELECT * FROM ingestion_candidates WHERE candidate_id = $1', [candidateId]);
+        candidateRow = res.rows[0];
+      } else {
+        candidateRow = res.rows[0];
+      }
+
+      let currentStatus = candidateRow.status;
+      if (currentStatus === 'COMPLETED') return { status: 'already_completed' };
+      if (currentStatus === 'FAILED' && candidateRow.retry_count >= 3) return { status: 'already_failed' };
+
+      // Helper to check if we should run a state
+      const shouldRun = (stateName) => STATES[currentStatus] <= STATES[stateName];
+
+      let mediaBuffer = null;
+      let imageMeta = null;
+      let sha256_hash = null;
+      let phash = null;
+      let b2Key = null;
+      let mediaId = candidateRow.media_id;
 
       try {
-        if (acqResult.status === 'failed') {
-          const isTransient = 
-            acqResult.error.includes('Timeout') || 
-            acqResult.error.includes('fetch failed') ||
-            acqResult.error.includes('HTTP Error 429') ||
-            acqResult.error.match(/HTTP Error 5\d\d/);
-
-          if (isTransient) {
-            throw new Error(`Transient media acquisition failure: ${acqResult.error}`);
-          } else {
-            await markPermanentFailure(acqResult.error);
-            logger.warn(`Permanent media acquisition failure`, { jobId: job.id, candidateId: candidate.candidate_id, reason: acqResult.error });
-            return { status: 'failed', reason: acqResult.error };
+        if (shouldRun('VALIDATING')) {
+          await updateState(db, candidateId, 'VALIDATING');
+          if (!payload.media_url) {
+            await updateState(db, candidateId, 'FAILED', { error_reason: 'no_media_url' });
+            return { status: 'skipped', reason: 'no_media_url' };
           }
-        }
-        
-        if (acqResult.status === 'skipped') {
-          return { status: 'skipped', reason: acqResult.error };
+          currentStatus = 'DOWNLOADING';
         }
 
-        // --- Phase 3.7.3-A Media Inspection ---
-        let inspectionResult = null;
-        try {
-          inspectionResult = await inspectMedia(acqResult.local_path);
-          logger.info(`Media inspection successful`, { 
-            jobId: job.id, 
-            candidateId: candidate.candidate_id, 
-            media_type: inspectionResult.media_type,
-            mime_type: inspectionResult.mime_type,
-            dimensions: `${inspectionResult.width}x${inspectionResult.height}`,
-            size: inspectionResult.file_size_bytes 
-          });
-        } catch (err) {
-          const isPermanent = 
-            err instanceof UnsupportedMediaError ||
-            err instanceof CorruptMediaError ||
-            err instanceof DimensionLimitError ||
-            err instanceof FileSizeLimitError;
+        if (shouldRun('DOWNLOADING')) {
+          await updateState(db, candidateId, 'DOWNLOADING');
+          const dlResult = await downloadMedia(payload.media_url);
+          mediaBuffer = dlResult.buffer;
+          currentStatus = 'MEDIA_VALIDATED';
+        }
 
-          if (isPermanent) {
-            await markPermanentFailure(err.message);
-            logger.warn(`Permanent media inspection failure`, { jobId: job.id, candidateId: candidate.candidate_id, reason: err.message });
-            return { status: 'failed', reason: err.message };
-          } else {
-            throw new Error(`Transient media inspection failure: ${err.message}`);
+        if (shouldRun('MEDIA_VALIDATED')) {
+          await updateState(db, candidateId, 'MEDIA_VALIDATED');
+          if (!mediaBuffer) {
+             const dlResult = await downloadMedia(payload.media_url);
+             mediaBuffer = dlResult.buffer;
           }
+          imageMeta = await validateImage(mediaBuffer);
+          currentStatus = 'HASHING';
         }
 
-        // --- Phase 3.7.4-A Normalization ---
-        try {
-          normResult = await normalizeImage(acqResult.local_path);
-          logger.info(`Image normalization successful`, {
-            jobId: job.id,
-            candidateId: candidate.candidate_id,
-            canonical_path: normResult.outputPath,
-            normalized: true,
-            original_dimensions: `${inspectionResult.width}x${inspectionResult.height}`,
-            canonical_dimensions: `${normResult.width}x${normResult.height}`,
-            original_format: inspectionResult.mime_type,
-            canonical_format: normResult.format,
-            sizeBytes: normResult.sizeBytes
-          });
-        } catch (err) {
-          const isPermanent = err instanceof InputValidationError || err instanceof NormalizationError;
-          if (isPermanent) {
-            await markPermanentFailure(err.message);
-            logger.warn(`Permanent image normalization failure`, { jobId: job.id, candidateId: candidate.candidate_id, reason: err.message });
-            return { status: 'failed', reason: err.message };
-          } else {
-            throw new Error(`Transient image normalization failure: ${err.message}`);
+        if (shouldRun('HASHING')) {
+          await updateState(db, candidateId, 'HASHING');
+          if (!mediaBuffer) {
+             const dlResult = await downloadMedia(payload.media_url);
+             mediaBuffer = dlResult.buffer;
           }
-        }
-
-        // --- Phase 3.7.5 Media Storage ---
-        let storageResult = null;
-        try {
-          const objectKey = `memes/${candidate.platform}/${candidate.candidate_id}.jpeg`;
-          storageResult = await uploadCanonicalArtifact({
-            filePath: normResult.outputPath,
-            objectKey,
-            contentType: 'image/jpeg',
-            contentLength: normResult.sizeBytes
-          });
-        } catch (err) {
-          if (err.isTransient) {
-            throw new Error(`Transient media storage failure: ${err.message}`);
-          } else {
-            await markPermanentFailure(err.message);
-            logger.warn(`Permanent media storage failure`, { jobId: job.id, candidateId: candidate.candidate_id, reason: err.message });
-            return { status: 'failed', reason: err.message };
-          }
-        }
-
-        // --- Phase 4 Database Update ---
-        if (db) {
-          try {
-            await db.query(
-               'UPDATE discovery_candidates SET status = $1, media_url = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3',
-               ['ingested', storageResult.url, candidate.candidate_id]
-            );
-          } catch (dbErr) {
-             logger.error('Failed to update discovery_candidates status to ingested', { error: dbErr.message });
-          }
-        }
-
-        // --- Phase 4 Embedding Integration Boundary ---
-        if (db) {
-           try {
-             const objectKey = `memes/${candidate.platform}/${candidate.candidate_id}.jpeg`;
-             const response = await fetch(`${config.PYTHON_SERVICE_URL}/index-meme`, {
-               method: 'POST',
-               headers: { 'Content-Type': 'application/json' },
-               body: JSON.stringify({
-                 b2_key: objectKey,
-                 caption: candidate.caption || candidate.title || null
-               })
-             });
-             
-             if (!response.ok) {
-                throw new Error(`Python service responded with status: ${response.status}`);
-             }
-             
-             await db.query(
-               'UPDATE discovery_candidates SET embedding_status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
-               ['success', candidate.candidate_id]
-             );
-           } catch (embedErr) {
-             logger.warn('Embedding integration boundary failed. Candidate ingested but not indexed.', { error: embedErr.message });
-             await db.query(
-               'UPDATE discovery_candidates SET embedding_status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
-               ['failed', candidate.candidate_id]
-             ).catch(() => {});
+          sha256_hash = calculateSha256(mediaBuffer);
+          phash = await calculatePhash(mediaBuffer);
+          currentStatus = 'DEDUPLICATING';
+        } else {
+           if (!mediaId) {
+             const cr = await db.query('SELECT media_id FROM ingestion_candidates WHERE candidate_id = $1', [candidateId]);
+             mediaId = cr.rows[0].media_id;
            }
         }
 
-        // Simulated downstream failure testing hook
-        if (candidate.platform === 'test-downstream-fail') {
-          throw new Error('Simulated transient downstream processing failure for testing');
+        if (shouldRun('DEDUPLICATING')) {
+          await updateState(db, candidateId, 'DEDUPLICATING');
+          
+          const ext = imageMeta
+  ? (imageMeta.format === 'jpeg' ? 'jpg' : imageMeta.format)
+  : 'jpg';
+
+const filename = generateFilename(
+  payload.caption || payload.title || '',
+  candidateId,
+  ext,
+  sha256_hash
+);
+
+const prospectiveB2Key =
+  `${config.INGESTION_B2_KEY_PREFIX || 'ingestion/'}${filename}`;
+
+          // Race-safe insertion
+          let mediaRes = await db.query(
+            `INSERT INTO ingestion_media (sha256_hash, phash, b2_key, format, width, height, file_size)
+             VALUES ($1, $2, $3, $4, $5, $6, $7)
+             ON CONFLICT (sha256_hash) DO NOTHING RETURNING id, b2_key, embedding_status`,
+            [sha256_hash, phash, prospectiveB2Key, imageMeta?.format, imageMeta?.width, imageMeta?.height, mediaBuffer?.byteLength]
+          );
+
+          let isDuplicate = false;
+          if (mediaRes.rows.length === 0) {
+             isDuplicate = true;
+             mediaRes = await db.query('SELECT id, b2_key, embedding_status FROM ingestion_media WHERE sha256_hash = $1', [sha256_hash]);
+          }
+
+          mediaId = mediaRes.rows[0].id;
+          b2Key = mediaRes.rows[0].b2_key;
+          await updateState(db, candidateId, 'STORING', { media_id: mediaId });
+          
+          if (isDuplicate) {
+             const eStatus = mediaRes.rows[0].embedding_status;
+             if (eStatus === 'success') {
+                currentStatus = 'COMPLETED';
+             } else {
+                currentStatus = 'OCR'; 
+             }
+          } else {
+             currentStatus = 'STORING';
+          }
         }
 
-        return { 
-          status: 'COMPLETED', 
-          acquisition: acqResult, 
-          metadata: inspectionResult,
-          normalization: normResult,
-          artifact: storageResult
-        };
-      } finally {
-        // Cleanup acquisition temp file unconditionally
-        if (acqResult?.local_path) {
-          try {
-            await fs.unlink(acqResult.local_path);
-            logger.info(`Successfully cleaned up acquisition temp file`, { path: acqResult.local_path });
-          } catch (err) {
-            logger.warn(`Failed to cleanup acquisition temp file`, { path: acqResult.local_path, error: err.message });
+        if (shouldRun('STORING')) {
+          await updateState(db, candidateId, 'STORING');
+          
+          if (!b2Key) {
+             const mr = await db.query('SELECT b2_key FROM ingestion_media WHERE id = $1', [mediaId]);
+             b2Key = mr.rows[0].b2_key;
           }
+          if (!mediaBuffer) {
+             const dlResult = await downloadMedia(payload.media_url);
+             mediaBuffer = dlResult.buffer;
+          }
+
+          await uploadToB2(mediaBuffer, b2Key, imageMeta?.format ? `image/${imageMeta.format}` : 'image/jpeg');
+          currentStatus = 'OCR';
         }
-        // Cleanup normalized artifact since downstream processing does not yet permanently store it
-        if (normResult?.outputPath) {
-          try {
-            await fs.unlink(normResult.outputPath);
-            logger.info(`Successfully cleaned up normalized temp file`, { path: normResult.outputPath });
-          } catch (err) {
-            logger.warn(`Failed to cleanup normalized temp file`, { path: normResult.outputPath, error: err.message });
+
+        if (shouldRun('OCR')) {
+          await updateState(db, candidateId, 'OCR');
+          if (!b2Key) {
+             const mr = await db.query('SELECT b2_key FROM ingestion_media WHERE id = $1', [mediaId]);
+             b2Key = mr.rows[0].b2_key;
           }
+          
+          const pythonRes = await indexMeme(b2Key, payload.caption || '');
+          
+          await db.query(
+            'UPDATE ingestion_media SET ocr_status = $1, ocr_text = $2, embedding_status = $3, embedding_dimension = $4 WHERE id = $5',
+            [
+              pythonRes.ocr_status || 'success', 
+              pythonRes.ocr_text || null, 
+              pythonRes.embedding_status || 'success', 
+              pythonRes.embedding_dimensions || 512, 
+              mediaId
+            ]
+          );
+
+          currentStatus = 'EMBEDDING';
+        }
+
+        if (shouldRun('EMBEDDING')) {
+           // Both OCR and CLIP happen in one shot from indexMeme for MemeSearch, 
+           // but we treat EMBEDDING as a separate conceptual phase here just to track it cleanly.
+           await updateState(db, candidateId, 'EMBEDDING');
+           currentStatus = 'COMPLETED';
+        }
+
+        if (shouldRun('COMPLETED')) {
+          await updateState(db, candidateId, 'COMPLETED', { ingested_at: new Date().toISOString() });
+        }
+
+        return { status: 'completed', candidate_id: candidateId, media_id: mediaId };
+      } catch (err) {
+        const isTransient = err.isTransient !== undefined ? err.isTransient : true; 
+        if (isTransient) {
+          throw err; 
+        } else {
+          await updateState(db, candidateId, 'FAILED', { error_reason: err.message });
+          return { status: 'failed', reason: err.message };
         }
       }
     }, {
@@ -228,31 +241,15 @@ export function initWorker() {
       concurrency
     });
 
-    ingestionWorker.on('completed', (job) => {
-      logger.info(`Worker completed job`, { jobId: job.id });
+    ingestionWorker.on('failed', async (job, err) => {
+      try {
+         const db = getDatabasePool();
+         await db.query('UPDATE ingestion_candidates SET retry_count = retry_count + 1 WHERE candidate_id = $1', [job.data?.candidate_id]);
+      } catch (e) {}
+      logger.warn(`Worker failed attempt, will retry`, { jobId: job?.id || 'unknown', error: err.message });
     });
 
-    ingestionWorker.on('failed', (job, err) => {
-      const attemptsMade = job?.attemptsMade || 0;
-      const maxAttempts = job?.opts?.attempts || 3;
-      const isFinal = attemptsMade >= maxAttempts;
-      
-      if (isFinal) {
-        logger.error(`Worker final FAILED state for job`, { 
-          jobId: job?.id || 'unknown', 
-          error: err.message,
-          attemptsMade
-        });
-      } else {
-        logger.warn(`Worker failed attempt, will retry`, { 
-          jobId: job?.id || 'unknown', 
-          error: err.message,
-          attemptsMade
-        });
-      }
-    });
-
-    logger.info(`BullMQ Worker initialized for meme-ingestion queue with concurrency ${concurrency}`);
+    logger.info(`BullMQ Worker initialized for ${queueName} with concurrency ${concurrency}`);
   }
   return ingestionWorker;
 }

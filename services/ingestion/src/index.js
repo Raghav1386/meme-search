@@ -2,6 +2,7 @@ import express from 'express';
 import config, { validateConfig } from './config/index.js';
 import logger from './utils/logger.js';
 import { getRedisClient, checkRedisHealth, closeRedisConnection } from './config/redis.js';
+import { runMigrations } from './database/migrations.js';
 import { initWorker, closeWorker } from './queue/worker.js';
 
 let server;
@@ -15,14 +16,17 @@ async function bootstrap() {
     // 2. Initialize Redis
     getRedisClient();
 
-    // 3. Initialize Worker
+    // 3. Initialize Database & run migrations
+    await runMigrations();
+
+    // 4. Initialize Worker
     initWorker();
 
-    // 4. Initialize application
+    // 5. Initialize application
     const app = express();
     app.use(express.json());
 
-    // 5. Health check endpoint
+    // 6. Health check endpoint
     app.get('/health', async (req, res) => {
       const redisStatus = await checkRedisHealth();
       res.status(200).json({
@@ -33,7 +37,7 @@ async function bootstrap() {
       });
     });
 
-    // 6. Start server
+    // 7. Start server
     server = app.listen(config.PORT, () => {
       logger.info(`Ingestion Service successfully started on port ${config.PORT}`);
     });

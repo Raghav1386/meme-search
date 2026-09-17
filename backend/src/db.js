@@ -20,7 +20,7 @@ export const queryMemes = async (queryText, embedding, format) => {
 
     const result = await pool.query(
       `
-      SELECT id, b2_key, caption, ocr_text, format, score
+      SELECT id, b2_key, caption, ocr_text, format, score, created_at
       FROM match_memes_hybrid($1, $2::vector, 12, $3);
       `,
       [textParam, vectorParam, filterFormat]

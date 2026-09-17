@@ -69,23 +69,26 @@ The discovery core is completely platform-agnostic and relies on a rigid **Sourc
 - `mock`: Emits a predefined payload of raw candidates for regression testing.
 - `mock-fail`: Emits a fatal exception to verify source boundary isolation.
 
-### Reddit Source Configuration
-The Reddit source relies on the official Application-Only OAuth (Client Credentials) flow. It does not scrape Reddit.
+### Apify Reddit Source Configuration (Phase 1)
+The Reddit source relies on the official Apify Client to execute the `harshmaur~reddit-scraper` Actor. It dynamically accepts a search query.
 To enable it, provide the following environment variables:
 ```env
-DISCOVERY_REDDIT_SOURCE_ENABLED=true
-REDDIT_CLIENT_ID=your_client_id
-REDDIT_CLIENT_SECRET=your_client_secret
-REDDIT_SUBREDDITS=memes,dankmemes,funny
-REDDIT_LIMIT=25
-REDDIT_REQUEST_TIMEOUT_MS=10000
-REDDIT_USER_AGENT=MemeSearch/1.0.0
+DISCOVERY_APIFY_REDDIT_ENABLED=true
+APIFY_API_TOKEN=your_apify_token_here
+APIFY_REDDIT_ACTOR=harshmaur~reddit-scraper
 ```
-- **Authentication**: Requires a valid Client ID and Secret. Tokens are kept in memory and never logged.
-- **Failure Behavior**: Missing credentials, timeouts, or network failures trigger an isolated source error, incrementing failure metrics without crashing the Discovery run.
-- **Subreddit Handling**: Subreddits are processed independently. If one subreddit is rate-limited (429) or times out, successful posts from other subreddits are safely retained.
-- **Raw Candidate Mapping**: Post ID, image URL, title, body text, upvotes, and comments are mapped natively to the `Candidate` schema payload. Missing media URLs are handled safely and passed to validation.
-- **Security Considerations**: `REDDIT_CLIENT_SECRET` must never be hardcoded or logged.
+- **Authentication**: Requires a valid Apify API Token. Tokens are kept in memory and never logged, returned, or exposed.
+- **Actor Behavior**: It executes a global search (no fixed subreddits) returning only Post records.
+- **Triggering**: You can dynamically pass a search query to the Apify Actor using the `/api/discovery/collect` endpoint.
+- **Failure Isolation**: Network failures, Apify authentication failures, and Actor timeouts are safely caught and isolated.
+
+#### How to start a Reddit collection
+```bash
+curl -X POST http://localhost:4000/api/discovery/collect \
+  -H "Content-Type: application/json" \
+  -d '{"query": "meme"}'
+```
+This triggers the Apify Actor with the provided query, fetches the results, and feeds them into the existing Discovery pipeline. The MemeSearch application is completely untouched and isolated from this process.
 
 ### YouTube Source Configuration
 The YouTube source fetches videos using the official YouTube Data API v3. 

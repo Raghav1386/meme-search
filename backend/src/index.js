@@ -11,6 +11,8 @@ app.use(express.json());
 
 app.use("/api/search", searchRoute);
 
+import ingestionRoute from "./ingestion.js";
+app.use("/api/ingestion", ingestionRoute);
 import { streamB2Image } from "./image.js";
 app.get("/api/image", streamB2Image);
 

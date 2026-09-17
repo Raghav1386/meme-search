@@ -6,7 +6,8 @@ create table if not exists memes (
   caption text,
   ocr_text text,
   format text,
-  embedding vector(512)
+  embedding vector(512),
+  created_at timestamp default current_timestamp
 );
 
 alter table memes add column if not exists ocr_text text;
@@ -58,6 +59,8 @@ as $$
   limit match_count;
 $$;
 
+DROP FUNCTION IF EXISTS match_memes_hybrid(text,vector,integer,text,integer);
+
 create or replace function match_memes_hybrid (
   query_text text,
   query_embedding vector(512) default null,
@@ -71,7 +74,8 @@ returns table (
   caption text,
   ocr_text text,
   format text,
-  score float
+  score float,
+  created_at timestamp
 )
 language sql
 as $$
@@ -107,10 +111,10 @@ as $$
     m.caption,
     m.ocr_text,
     m.format,
-    c.score
+    c.score,
+    m.created_at
   from combined c
   join memes m on m.id = c.id
   order by c.score desc
   limit match_count;
 $$;
-

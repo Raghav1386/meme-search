@@ -1,92 +1,85 @@
 import config from '../config/index.js';
+import {
+  calculateFreshness,
+  calculateEngagement,
+  calculatePopularity,
+  calculateVelocity,
+  calculateSourceStrength
+} from './trendSignalEngine.js';
+
+function classifyScore(score) {
+  if (score < 25) return 'low';
+  if (score < 50) return 'moderate';
+  if (score < 75) return 'high';
+  return 'very_high';
+}
 
 export function scoreCandidate(candidate, referenceTimeMs = Date.now()) {
   const breakdown = {
-    engagement: 0,
-    freshness: 0,
-    velocity: null, // Explicitly null as we only have lifetime snapshots right now
-    platform: null
+    freshness: null,
+    engagement: null,
+    engagement_velocity: null,
+    popularity: null,
+    source_strength: null
+  };
+
+  const weights = {
+    freshness: config.TREND_WEIGHT_FRESHNESS,
+    engagement: config.TREND_WEIGHT_ENGAGEMENT,
+    engagement_velocity: config.TREND_WEIGHT_VELOCITY,
+    popularity: config.TREND_WEIGHT_POPULARITY,
+    source_strength: config.TREND_WEIGHT_SOURCE
   };
 
   try {
-    // 1. ENGAGEMENT SCORING
-    // Weights and theoretical maximum log values (e.g., 1 billion views = log10(1B) = 9)
-    const engagementConfig = {
-      views: { maxLog: 9, weight: 0.5 },
-      likes: { maxLog: 8, weight: 0.3 },
-      comments: { maxLog: 7, weight: 0.2 }
-    };
+    // 1. Compute Signals
+    breakdown.freshness = calculateFreshness(candidate, referenceTimeMs);
+    breakdown.engagement = calculateEngagement(candidate);
+    breakdown.engagement_velocity = calculateVelocity(candidate, referenceTimeMs);
+    breakdown.popularity = calculatePopularity(candidate);
+    breakdown.source_strength = calculateSourceStrength(candidate);
 
-    let totalEngagementVal = 0;
-    let availableWeight = 0;
+    // 2. Renormalize weights for missing signals
+    let totalAvailableWeight = 0;
+    let weightedSum = 0;
 
-    if (candidate.engagement && typeof candidate.engagement === 'object') {
-      for (const [key, conf] of Object.entries(engagementConfig)) {
-        const raw = candidate.engagement[key];
-        if (typeof raw === 'number' && !isNaN(raw) && isFinite(raw) && raw >= 0) {
-          const logValue = Math.log10(raw + 1);
-          const normalized = Math.min(logValue / conf.maxLog, 1.0);
-          totalEngagementVal += normalized * conf.weight;
-          availableWeight += conf.weight;
-        }
+    for (const [key, signal] of Object.entries(breakdown)) {
+      if (signal !== null) {
+        // Clamp signal defensively just in case engine fails
+        const clampedSignal = Math.max(0, Math.min(signal, 1.0));
+        weightedSum += clampedSignal * weights[key];
+        totalAvailableWeight += weights[key];
       }
     }
 
-    // Redistribute weight if some metrics are missing
-    if (availableWeight > 0) {
-      breakdown.engagement = (totalEngagementVal / availableWeight) * 100;
-    } else {
-      breakdown.engagement = 0; // Neutral fallback for missing engagement
-    }
-
-    // 2. FRESHNESS SCORING
-    if (candidate.published_at) {
-      const pubDate = new Date(candidate.published_at);
-      if (!isNaN(pubDate)) {
-        let ageHours = (referenceTimeMs - pubDate.getTime()) / (1000 * 60 * 60);
-        
-        // Clamp future timestamps safely to 0
-        if (ageHours < 0) ageHours = 0;
-
-        // Exponential decay: score = e^(-lambda * t)
-        // lambda = ln(2) / half_life
-        const lambda = Math.LN2 / config.TREND_FRESHNESS_HALFLIFE_HOURS;
-        breakdown.freshness = Math.exp(-lambda * ageHours) * 100;
-      } else {
-        breakdown.freshness = 50; // Neutral fallback for malformed date
-      }
-    } else {
-      breakdown.freshness = 50; // Neutral fallback for completely missing published_at
-    }
-
-    // Clamp bounds just to be absolutely certain
-    breakdown.engagement = Math.max(0, Math.min(100, breakdown.engagement));
-    breakdown.freshness = Math.max(0, Math.min(100, breakdown.freshness));
-
-    // 3. FINAL WEIGHTED CALCULATION
-    const totalWeights = config.TREND_ENGAGEMENT_WEIGHT + config.TREND_FRESHNESS_WEIGHT;
-    
+    // 3. Final Score
     let finalScore = 0;
-    if (totalWeights > 0) {
-      finalScore = (
-        (breakdown.engagement * config.TREND_ENGAGEMENT_WEIGHT) + 
-        (breakdown.freshness * config.TREND_FRESHNESS_WEIGHT)
-      ) / totalWeights;
+    if (totalAvailableWeight > 0) {
+      finalScore = (weightedSum / totalAvailableWeight) * 100;
     }
 
-    // Round to 2 decimal places for neatness and bounds safety
+    // Clamp score 0-100 and round to 2 decimals
+    finalScore = Math.max(0, Math.min(100, finalScore));
     const trend_score = Math.round(finalScore * 100) / 100;
 
     return {
       trend_score,
-      components: breakdown
+      classification: classifyScore(trend_score),
+      components: {
+        signals: breakdown,
+        weights: weights
+      }
     };
 
   } catch (e) {
-    // Isolated safety catch - if scoring catastrophically fails, return neutral 0 score
     return {
       trend_score: 0,
-      components: breakdown
+      classification: 'low',
+      components: {
+        signals: breakdown,
+        weights: weights,
+        error: e.message
+      }
     };
   }
 }

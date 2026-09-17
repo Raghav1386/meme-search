@@ -1,17 +1,17 @@
 import logger from '../utils/logger.js';
 import { MockSourceAdapter, MockFailSourceAdapter } from './mockSource.js';
-import { RedditSourceAdapter } from './redditSource.js';
 import { YouTubeSourceAdapter } from './youtubeSource.js';
+import { ApifyRedditSourceAdapter } from './apifyRedditSource.js';
 
 // Central registry of all available sources
 const adapters = [
   new MockSourceAdapter(),
   new MockFailSourceAdapter(),
-  new RedditSourceAdapter(),
-  new YouTubeSourceAdapter()
+  new YouTubeSourceAdapter(),
+  new ApifyRedditSourceAdapter()
 ];
 
-export async function executeSources(discoveryRunId) {
+export async function executeSources(discoveryRunId, options = {}) {
   const candidates = [];
   const sourceMetrics = {
     executed: 0,
@@ -27,6 +27,7 @@ export async function executeSources(discoveryRunId) {
   });
 
   const context = {
+    ...options,
     discovery_run_id: discoveryRunId,
     execution_time: Date.now()
   };
@@ -43,33 +44,85 @@ export async function executeSources(discoveryRunId) {
     try {
       logger.info('Source execution started', { discovery_run_id: discoveryRunId, source_name: adapter.name });
       
-      const rawCandidates = await adapter.fetch(context);
+      // Pass the entire context to the adapter
+      const result = await adapter.fetch(context);
       const durationMs = Date.now() - startTime;
       
-      candidates.push(...rawCandidates);
-      
-      sourceMetrics.executed++;
-      sourceMetrics.received += rawCandidates.length;
-      sourceMetrics.details[adapter.name] = { status: 'success', received: rawCandidates.length };
-      
-      logger.info('Source execution completed', { 
-        discovery_run_id: discoveryRunId, 
-        source_name: adapter.name, 
-        received_count: rawCandidates.length,
-        duration_ms: durationMs,
-        status: 'success'
-      });
+      let rawCandidates = [];
+      let status = 'SUCCESS_WITH_DATA'; // default for legacy arrays
+      let reason = null;
+      let additionalDetails = {};
+
+      if (Array.isArray(result)) {
+        rawCandidates = result;
+        status = rawCandidates.length > 0 ? 'SUCCESS_WITH_DATA' : 'SUCCESS_EMPTY';
+      } else if (result && typeof result === 'object') {
+        rawCandidates = result.candidates || [];
+        status = result.status || 'SUCCESS_WITH_DATA';
+        reason = result.reason || null;
+        
+        // Include any other keys like apifyRunId
+        const { candidates: _c, status: _s, reason: _r, ...rest } = result;
+        additionalDetails = rest;
+      }
+
+      const isSuccess = status === 'SUCCESS_WITH_DATA' || status === 'SUCCESS_EMPTY';
+      const isPartial = typeof status === 'string' && status.includes('_PARTIAL');
+
+      if (isSuccess || isPartial) {
+        candidates.push(...rawCandidates);
+        
+        if (isSuccess) {
+           sourceMetrics.executed++;
+        } else {
+           sourceMetrics.failed++; // Conceptually a source failure, but data was retrieved
+        }
+        sourceMetrics.received += rawCandidates.length;
+        sourceMetrics.details[adapter.name] = { 
+          status, 
+          received: rawCandidates.length,
+          reason,
+          ...additionalDetails
+        };
+        
+        logger.info('Source execution completed (or partial)', { 
+          discovery_run_id: discoveryRunId, 
+          source_name: adapter.name, 
+          received_count: rawCandidates.length,
+          duration_ms: durationMs,
+          status,
+          ...additionalDetails
+        });
+      } else {
+        // CHARGE_LIMIT_REACHED, LOCAL_BUDGET_BLOCKED, ACTOR_FAILED, etc.
+        sourceMetrics.failed++;
+        sourceMetrics.details[adapter.name] = { 
+          status, 
+          received: 0, 
+          reason,
+          ...additionalDetails
+        };
+        
+        logger.warn(`Source execution blocked or failed: ${status}`, {
+          discovery_run_id: discoveryRunId,
+          source_name: adapter.name,
+          status,
+          reason,
+          duration_ms: durationMs,
+          ...additionalDetails
+        });
+      }
     } catch (err) {
       const durationMs = Date.now() - startTime;
       sourceMetrics.failed++;
-      sourceMetrics.details[adapter.name] = { status: 'failed', received: 0, error: err.message };
+      sourceMetrics.details[adapter.name] = { status: 'UNHANDLED_ERROR', received: 0, error: err.message };
       
       // Isolate source failures - DO NOT CRASH
-      logger.error('Source execution failed', { 
+      logger.error('Source execution failed abruptly', { 
         discovery_run_id: discoveryRunId, 
         source_name: adapter.name, 
         duration_ms: durationMs,
-        status: 'failed',
+        status: 'UNHANDLED_ERROR',
         error: err.message 
       });
     }

@@ -1,17 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, Link, useNavigate } from 'react-router-dom';
-import Filter from './filter';
 import { formatRelativeTime } from '../utils/time';
 
-export default function MemeResult({ user, requireAuth, onSearch }) {
+export default function NewMemes({ user, requireAuth }) {
   const [memes, setMemes] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeFilter, setActiveFilter] = useState('all');
-  const location = useLocation();
   const navigate = useNavigate();
-  const initialQuery = new URLSearchParams(location.search).get('q') || 'ALL_UNITS';
-  const [searchInputValue, setSearchInputValue] = useState(initialQuery);
-  const query = initialQuery;
   const [currentTime, setCurrentTime] = useState(new Date());
 
   useEffect(() => {
@@ -20,40 +14,14 @@ export default function MemeResult({ user, requireAuth, onSearch }) {
   }, []);
 
   useEffect(() => {
-    setSearchInputValue(initialQuery);
-  }, [initialQuery]);
-
-  const handleLocalSearch = (e) => {
-    e.preventDefault();
-    if (!searchInputValue.trim()) return;
-    
-    if (!user) {
-      localStorage.setItem('pending_search_query', searchInputValue);
-      requireAuth('Authentication Required to Search', () => {
-        if (onSearch) onSearch(searchInputValue);
-        navigate(`/results?q=${encodeURIComponent(searchInputValue)}`);
-        localStorage.removeItem('pending_search_query');
-      });
-      return;
-    }
-
-    if (onSearch) onSearch(searchInputValue);
-    localStorage.removeItem('pending_search_query');
-    navigate(`/results?q=${encodeURIComponent(searchInputValue)}`);
-  };
-
-  useEffect(() => {
-
-
     const fetchMemes = async () => {
       setLoading(true);
       try {
-        // Automatically remove any accidental trailing slashes from the environment variable
         const rawApiUrl = import.meta.env.VITE_API_URL || '';
         const apiUrl = rawApiUrl.replace(/\/+$/, '');
         
-        const res = await fetch(`${apiUrl}/api/search?q=${encodeURIComponent(query)}&format=${activeFilter}`);
-        if (!res.ok) throw new Error('Failed to fetch memes');
+        const res = await fetch(`${apiUrl}/api/ingestion/memes?limit=20`);
+        if (!res.ok) throw new Error('Failed to fetch newly ingested memes');
         const data = await res.json();
         
         const formattedMemes = data.map(m => ({
@@ -64,13 +32,13 @@ export default function MemeResult({ user, requireAuth, onSearch }) {
           url: m.url.startsWith('http') ? m.url : `${apiUrl}${m.url}`,
           tags: m.format ? [m.format] : [],
           format: m.format,
-          result_type: m.result_type,
+          platform: m.platform,
           ingested_at: m.ingested_at
         }));
         
         setMemes(formattedMemes);
       } catch (error) {
-        console.error('Error fetching memes:', error);
+        console.error('Error fetching new memes:', error);
         setMemes([]);
       } finally {
         setLoading(false);
@@ -78,9 +46,7 @@ export default function MemeResult({ user, requireAuth, onSearch }) {
     };
 
     fetchMemes();
-  }, [query, activeFilter, user, navigate]);
-
-  const filteredMemes = memes; // Filtering is now handled by the backend
+  }, [user, navigate]);
 
   return (
     <div className="pt-32 pb-20 min-h-screen relative z-10">
@@ -90,44 +56,19 @@ export default function MemeResult({ user, requireAuth, onSearch }) {
         <div className="w-full md:w-auto flex flex-col items-center md:items-start">
           <div className="flex items-center justify-center md:justify-start gap-3 font-mono text-[0.65rem] text-[#ff4a1c] mb-3 uppercase tracking-widest w-full">
             <span className="w-2 h-2 bg-[#ff4a1c] animate-pulse"></span>
-            <span>Meme Database // query: {query}</span>
+            <span>Meme Database // New Arrivals</span>
           </div>
           <h1 className="font-display font-[800] text-4xl md:text-5xl text-[#f4f4f5] leading-none mb-6">
-            Dank <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#ff4a1c] to-[#ff8c42]">Memes.</span>
+            New <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#ff4a1c] to-[#ff8c42]">Arrivals.</span>
           </h1>
-
-          {/* LOCAL SEARCH BAR */}
-          <form onSubmit={handleLocalSearch} className="flex flex-col sm:flex-row w-full max-w-[32rem] mx-auto md:mx-0 relative group gap-3 sm:gap-0 mb-6">
-            <div className="flex-1 relative border border-[#22222f] bg-[#0a0a0d]/60 backdrop-blur-xl p-1 group-focus-within:border-[#ff4a1c]/60 transition-all duration-300 flex items-center" style={{ clipPath: 'polygon(0 0, 100% 0, 100% calc(100% - 0.75rem), calc(100% - 0.75rem) 100%, 0 100%)' }}>
-              <iconify-icon icon="solar:minimalistic-magnifer-linear" width="20" className="text-[#8a8a98] ml-4 group-focus-within:text-[#ff4a1c]"></iconify-icon>
-              <input 
-                type="text" 
-                placeholder="UPDATE_QUERY..." 
-                value={searchInputValue}
-                onChange={(e) => {
-                  setSearchInputValue(e.target.value);
-                  if (!user) localStorage.setItem('pending_search_query', e.target.value);
-                }}
-                className="w-full bg-transparent px-4 py-3 text-sm font-mono text-[#f4f4f5] placeholder:text-[#22222f] focus:outline-none focus:ring-0" 
-              />
-            </div>
-            <button type="submit" className="btn-cyber w-full sm:w-auto h-[3.25rem] px-6 text-xs font-bold text-white uppercase tracking-wider sm:-ml-4 flex items-center justify-center">
-              Search
-            </button>
-          </form>
-          
-          {/* FORMAT FILTER */}
-          <div className="flex justify-center md:justify-start w-full">
-            <Filter activeFilter={activeFilter} setFilter={setActiveFilter} />
-          </div>
         </div>
         
         <div className="flex gap-4 font-mono text-[0.6rem] justify-center md:justify-end w-full md:w-auto">
           <div className="px-4 py-2 bg-[#111116] border border-[#22222f] text-[#8a8a98]">
-            STATUS: <span className="text-[#ff4a1c]">MEMES_FOUND</span>
+            STATUS: <span className="text-[#ff4a1c]">INGESTION_SYNCED</span>
           </div>
           <div className="px-4 py-2 bg-[#111116] border border-[#22222f] text-[#8a8a98]">
-            UNITS: <span className="text-[#f4f4f5]">{filteredMemes.length}</span>
+            NEW UNITS: <span className="text-[#f4f4f5]">{memes.length}</span>
           </div>
         </div>
       </div>
@@ -140,7 +81,7 @@ export default function MemeResult({ user, requireAuth, onSearch }) {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-            {filteredMemes.map((meme, i) => (
+            {memes.map((meme, i) => (
               <div 
                 key={meme.id} 
                 className="group relative bg-[#111116]/40 backdrop-blur-md border border-[#22222f] p-3 reveal active flex flex-col transition-all duration-500 hover:border-[#ff4a1c]/50 hover:shadow-[0_0_40px_rgba(255,74,28,0.15)] hover:-translate-y-1"
@@ -163,18 +104,14 @@ export default function MemeResult({ user, requireAuth, onSearch }) {
                     className="w-full h-full object-cover grayscale transition-all duration-700 group-hover:grayscale-0 group-hover:scale-110" 
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-[#070709] to-transparent opacity-60 group-hover:opacity-20 transition-opacity"></div>
-                  
-
                 </div>
 
                 {/* Content */}
                 <div className="flex flex-col gap-3 flex-1 px-2 pb-2">
-
-                  
                   <div className="flex flex-wrap gap-2 mt-auto">
-                    {meme.result_type === 'ingestion' && (
-                      <span className="font-mono text-[0.55rem] text-[#ff4a1c] bg-[#070709] border border-[#ff4a1c]/50 px-2 py-0.5 shadow-[0_0_10px_rgba(255,74,28,0.2)]">
-                        DISCOVERED
+                    {meme.platform && (
+                      <span className="font-mono text-[0.55rem] text-[#ff4a1c] bg-[#070709] border border-[#ff4a1c]/30 px-2 py-0.5">
+                        {meme.platform.toUpperCase()}
                       </span>
                     )}
                     {meme.tags.map(tag => (
@@ -207,11 +144,17 @@ export default function MemeResult({ user, requireAuth, onSearch }) {
                 </div>
               </div>
             ))}
+            
+            {memes.length === 0 && (
+              <div className="col-span-1 sm:col-span-2 lg:col-span-3 text-center py-20">
+                <span className="font-mono text-[#8a8a98]">NO_NEW_MEMES_FOUND</span>
+              </div>
+            )}
           </div>
         )}
       </div>
 
-      <span className="accoutrement-coord top-[4rem] left-1/2 -translate-x-1/2 md:translate-x-0 md:top-[10rem] md:left-[2rem]">SEC.RESULT_VIEW</span>
+      <span className="accoutrement-coord top-[4rem] left-1/2 -translate-x-1/2 md:translate-x-0 md:top-[10rem] md:left-[2rem]">SEC.NEW_VIEW</span>
     </div>
   );
 }

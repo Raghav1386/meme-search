@@ -36,5 +36,7 @@ export class Candidate {
     this.trend_score = data.trend_score || 0;
     // Final priority score for ingestion queue
     this.discovery_score = data.discovery_score || 0;
+    // Extra platform-specific metadata
+    this.metadata = data.metadata || {};
   }
 }

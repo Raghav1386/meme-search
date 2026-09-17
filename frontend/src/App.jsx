@@ -11,6 +11,7 @@ import Home from './components/Home';
 import Preview from './components/preview';
 import UserProfileSidebar from './components/UserProfileSidebar';
 import AuthModal from './components/AuthModal';
+import NewMemes from './components/newMemes';
 
 // --- SHARED COMPONENTS ---
 
@@ -276,6 +277,7 @@ function AppContent() {
 
           <div className="hidden lg:flex items-center gap-10 text-sm font-mono font-medium text-[#8a8a98]">
             <a href="/#memes" className="relative hover:text-[#f4f4f5] transition-colors accoutrement-bracket uppercase">Memes</a>
+            <Link to="/new-memes" className="relative hover:text-[#f4f4f5] transition-colors accoutrement-bracket uppercase">New Arrivals</Link>
             <a href="/#app" className="relative hover:text-[#f4f4f5] transition-colors accoutrement-bracket uppercase">App</a>
             <a href="/#about" className="relative hover:text-[#f4f4f5] transition-colors accoutrement-bracket uppercase">About</a>
           </div>
@@ -323,6 +325,7 @@ function AppContent() {
           <div className="md:hidden absolute top-[4.5rem] left-0 w-full bg-[#0a0a0d] border-b border-[#22222f] p-6 flex flex-col gap-6 shadow-2xl">
             <div className="flex flex-col gap-4 font-mono text-sm uppercase text-[#8a8a98]">
               <a href="/#memes" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-[#f4f4f5]">Memes</a>
+              <Link to="/new-memes" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-[#f4f4f5]">New Arrivals</Link>
               <a href="/#app" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-[#f4f4f5]">App</a>
               <a href="/#about" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-[#f4f4f5]">About</a>
             </div>
@@ -394,6 +397,7 @@ function AppContent() {
       <Routes>
         <Route path="/" element={<Home waveformHeights={waveformHeights} onSearch={addToHistory} history={searchHistory} user={user} requireAuth={requireAuth} />} />
         <Route path="/results" element={<MemeResult user={user} requireAuth={requireAuth} onSearch={addToHistory} />} />
+        <Route path="/new-memes" element={<NewMemes user={user} requireAuth={requireAuth} />} />
         <Route path="/login" element={<Login onLogin={handleLogin} />} />
         <Route path="/preview" element={<Preview user={user} />} />
       </Routes>
