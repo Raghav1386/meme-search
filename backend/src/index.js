@@ -1,12 +1,21 @@
 import express from "express";
-import dotenv from "dotenv";
 import cors from "cors";
+import dotenv from "dotenv";
+import { initializeDB } from "./db.js";
+
+// Routes
+import imageRoute from "./image.js";
 import searchRoute from "./search.js";
 
 dotenv.config();
 
 const app = express();
+const PORT = process.env.PORT || 5000;
+
 app.use(cors());
+
+// Wait for DB to be ready
+await initializeDB();
 app.use(express.json());
 
 app.use("/api/search", searchRoute);
@@ -16,7 +25,7 @@ app.use("/api/ingestion", ingestionRoute);
 import { streamB2Image } from "./image.js";
 app.get("/api/image", streamB2Image);
 
-const PORT = process.env.PORT || 5000;
+// (Removed duplicate PORT declaration)
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);

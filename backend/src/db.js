@@ -12,6 +12,25 @@ const pool = new Pool({
   },
 });
 
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+export const initializeDB = async () => {
+  try {
+    console.log("Ensuring database schema is up-to-date...");
+    const sqlPath = path.join(__dirname, '..', 'sql', 'match_memes.sql');
+    const sql = fs.readFileSync(sqlPath, 'utf8');
+    await pool.query(sql);
+    console.log("Database schema ready.");
+  } catch (err) {
+    console.error("Failed to initialize DB schema:", err.message);
+  }
+};
+
 export const queryMemes = async (queryText, embedding, format) => {
   try {
     const filterFormat = format && format !== 'all' ? format : null;
