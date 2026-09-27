@@ -5,7 +5,9 @@
   "type": "module",
   "main": "src/index.js",
   "scripts": {
-    "start": "node src/index.js"
+    "start": "node src/index.js",
+    "collect:ravi-samay-latent": "node src/scripts/manualTopicCollector.js",
+    "collect:ravi-samay-latent:enqueue": "node src/scripts/manualTopicCollector.js --enqueue"
   },
   "dependencies": {
     "apify-client": "^2.25.0",

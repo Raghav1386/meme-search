@@ -37,6 +37,8 @@ const config = {
   INGESTION_PYTHON_SERVICE_URL: process.env.INGESTION_PYTHON_SERVICE_URL || 'http://127.0.0.1:8001',
   INGESTION_QUEUE_NAME: process.env.INGESTION_QUEUE_NAME || 'meme-ingestion-test',
   INGESTION_WORKER_CONCURRENCY: parseInt(process.env.INGESTION_WORKER_CONCURRENCY || '1', 10),
+  PYTHON_PROCESSOR_MODE: process.env.PYTHON_PROCESSOR_MODE || 'local',
+  INGESTION_REAL_PROCESSOR_URL: process.env.INGESTION_REAL_PROCESSOR_URL,
 };
 
 // Validate required config here
@@ -46,6 +48,10 @@ export function validateConfig() {
 
   if (missing.length > 0) {
     throw new Error(`CRITICAL: Missing required isolated configuration: ${missing.join(', ')}`);
+  }
+
+  if (config.PYTHON_PROCESSOR_MODE === 'hf-ingestion' && !config.INGESTION_REAL_PROCESSOR_URL) {
+    throw new Error('CRITICAL: INGESTION_REAL_PROCESSOR_URL is required when PYTHON_PROCESSOR_MODE is hf-ingestion');
   }
 
   // Ensure absolutely no fallback to legacy db URLs

@@ -3,7 +3,7 @@ from fastapi import FastAPI, BackgroundTasks, HTTPException
 from pydantic import BaseModel
 from transformers import CLIPProcessor, CLIPModel
 import torch
-from index_memes import index_single_meme, index_all_memes
+from index_memes import index_single_meme, index_all_memes, process_ingestion_meme
 
 app = FastAPI(title="Meme Search Worker API", description="Embedding & Auto-Ingestion Pipeline API")
 
@@ -14,6 +14,9 @@ class IndexMemeRequest(BaseModel):
     b2_key: str
     caption: Optional[str] = None
     force_reindex: bool = False
+
+class ProcessIngestionRequest(BaseModel):
+    b2_key: str
 
 class IndexBatchRequest(BaseModel):
     prefix: str = "backend/memes"
@@ -54,6 +57,21 @@ def index_meme_endpoint(req: IndexMemeRequest):
             custom_caption=req.caption,
             force_reindex=req.force_reindex
         )
+        return res
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/process-ingestion")
+def process_ingestion_endpoint(req: ProcessIngestionRequest):
+    """
+    On-demand endpoint called by automatic ingestion pipeline.
+    Downloads the image, performs OCR and CLIP embedding, and returns them 
+    WITHOUT inserting into the primary MemeSearch database.
+    """
+    try:
+        res = process_ingestion_meme(b2_key=req.b2_key)
+        if not res.get("success"):
+            raise HTTPException(status_code=500, detail=res.get("error", "Unknown error during processing"))
         return res
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

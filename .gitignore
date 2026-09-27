@@ -91,3 +91,13 @@ lerna-debug.log*
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+# ==========================================
+# 8. SCRATCH & TEMPORARY FILES
+# ==========================================
+scratch/
+scratch_*.*
+allfiles.txt
+b2-ingestion-list.txt
+services/manual-reddit-collection/output/
+services/**/scratch_*.*

@@ -229,6 +229,42 @@ def index_single_meme(b2_key: str, custom_caption: str = None, force_reindex: bo
         "embedding_dimensions": len(embedding) if embedding else 0
     }
 
+def process_ingestion_meme(b2_key: str, bucket=None) -> dict:
+    """
+    Downloads a meme from B2, computes its OCR and CLIP embedding, and returns them
+    WITHOUT inserting them into the primary MemeSearch database.
+    This is used exclusively by the new automatic ingestion pipeline.
+    """
+    if bucket is None:
+        bucket = get_b2_bucket()
+
+    fmt = infer_format_from_name(b2_key)
+    if fmt == "video":
+        return {
+            "success": False,
+            "error": "Video indexing currently unsupported",
+            "b2_key": b2_key
+        }
+
+    try:
+        file_bytes = download_b2_file(bucket, b2_key)
+        embedding = compute_image_embedding(file_bytes)
+        ocr_text = extract_ocr_text(file_bytes)
+
+        return {
+            "success": True,
+            "ocr_text": ocr_text,
+            "embedding": embedding,
+            "embedding_dimension": len(embedding) if embedding else 0,
+            "model": "openai/clip-vit-base-patch32"
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e),
+            "b2_key": b2_key
+        }
+
 def index_all_memes(prefix: str = "backend/memes", force_reindex: bool = False, max_files: int = None) -> dict:
     bucket = get_b2_bucket()
     conn = get_pg_conn()

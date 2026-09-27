@@ -61,7 +61,7 @@ export class ApifyRedditSourceAdapter extends SourceAdapter {
       type: "post",
       sort: "top",
       time: "week",
-      maxPostsCount: config.DISCOVERY_REDDIT_COLLECTION_LIMIT || 100,
+      maxPostsCount: Math.ceil((config.DISCOVERY_REDDIT_COLLECTION_LIMIT || 100) / queries.length),
       // Ensure we don't fetch unrelated content
       searchPosts: true,
       searchComments: false,

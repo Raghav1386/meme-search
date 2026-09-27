@@ -4,37 +4,10 @@ export function filterCandidate(candidate) {
   const threshold = config.TREND_MIN_SCORE;
   const trend_score = candidate.trend_score;
 
-  // Check if trend_score is present, numeric, finite, not negative, and not > 100
-  if (
-    trend_score === undefined ||
-    trend_score === null ||
-    typeof trend_score !== 'number' ||
-    isNaN(trend_score) ||
-    !isFinite(trend_score) ||
-    trend_score < 0 ||
-    trend_score > 100
-  ) {
-    return {
-      accepted: false,
-      reason: 'invalid_trend_score',
-      trend_score,
-      threshold
-    };
-  }
+  // Score validity check removed per user request. We accept all memes.
 
-  // Check 72-hour rolling window
-  if (candidate.published_at) {
-    const ageMs = Date.now() - new Date(candidate.published_at).getTime();
-    const maxAgeMs = config.DISCOVERY_REDDIT_BACKFILL_HOURS * 3600 * 1000;
-    if (ageMs > maxAgeMs) {
-       return {
-         accepted: false,
-         reason: 'expired_recent_window',
-         trend_score,
-         threshold
-       };
-    }
-  }
+  // Check 72-hour rolling window (REMOVED PER USER REQUEST)
+  // We no longer reject based on age.
 
   // Early Media Filtering (Image-Only Enforcement)
   if (config.DISCOVERY_IMAGE_ONLY) {
@@ -58,15 +31,8 @@ export function filterCandidate(candidate) {
     }
   }
 
-  // Check against minimum configuration threshold
-  if (trend_score < threshold) {
-    return {
-      accepted: false,
-      reason: 'trend_score_below_threshold',
-      trend_score,
-      threshold
-    };
-  }
+  // Check against minimum configuration threshold (REMOVED PER USER REQUEST)
+  // We no longer reject based on trend score.
 
   return {
     accepted: true,

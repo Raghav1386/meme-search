@@ -22,7 +22,14 @@ export async function indexMeme(b2Key, caption = '', forceReindex = false) {
     throw new IndexerError('b2Key is required for indexing', false);
   }
 
-  const endpoint = `${config.INGESTION_REAL_PROCESSOR_URL || 'http://127.0.0.1:8000'}/index-meme`;
+  let endpoint;
+  if (config.PYTHON_PROCESSOR_MODE === 'hf-ingestion') {
+    endpoint = config.INGESTION_REAL_PROCESSOR_URL;
+    if (!endpoint) throw new IndexerError('INGESTION_REAL_PROCESSOR_URL is required in hf-ingestion mode', false);
+  } else {
+    endpoint = `${config.INGESTION_REAL_PROCESSOR_URL || 'http://127.0.0.1:8000'}/index-meme`;
+  }
+
   const payload = {
     b2_key: b2Key,
     caption: caption
@@ -64,8 +71,14 @@ export async function indexMeme(b2Key, caption = '', forceReindex = false) {
 
     const data = await response.json();
     
+    // Map response from the new /process-ingestion format to what the worker expects
+    if (config.PYTHON_PROCESSOR_MODE === 'hf-ingestion') {
+      data.status = data.success ? 'success' : 'failed';
+      data.embedding_dimensions = data.embedding_dimension;
+    }
+
     logger.info(`Indexing completed successfully for ${b2Key}`, { 
-      status: data.status,
+      status: data.status || 'success',
       ocr_length: data.ocr_text ? data.ocr_text.length : 0,
       embedding_dims: data.embedding_dimensions
     });

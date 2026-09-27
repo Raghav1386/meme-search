@@ -496,6 +496,11 @@ export async function runDiscovery(providedRunId, options = {}) {
 
     rawCandidates = await executeSources(discoveryRunId, options);
     
+    // User requested hard limit of 300 memes per run (no 1k/2k extended runs)
+    if (rawCandidates.length > 300) {
+       rawCandidates = rawCandidates.slice(0, 300);
+    }
+
     const metrics = rawCandidates._sourceMetrics || {};
     baseResults.sources_configured = (metrics.executed || 0) + (metrics.skipped || 0) + (metrics.failed || 0);
     baseResults.sources_executed = metrics.executed || 0;
