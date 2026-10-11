@@ -6,10 +6,16 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
+const cleanEnv = (val, fallback = undefined) => {
+  if (val === undefined || val === null) return fallback;
+  const str = String(val).trim().replace(/^["']|["']$/g, '').trim();
+  return str || fallback;
+};
+
 const config = {
-  PORT: parseInt(process.env.PORT || '4000', 10),
-  LOG_LEVEL: process.env.LOG_LEVEL || 'info',
-  REDIS_URL: process.env.REDIS_URL,
+  PORT: parseInt(cleanEnv(process.env.PORT, '4000'), 10),
+  LOG_LEVEL: cleanEnv(process.env.LOG_LEVEL, 'info'),
+  REDIS_URL: cleanEnv(process.env.REDIS_URL),
   DISCOVERY_ENABLED: process.env.DISCOVERY_ENABLED !== 'false',
   DISCOVERY_RUN_MODE: process.env.DISCOVERY_RUN_MODE || 'test',
   DISCOVERY_MOCK_SOURCE_ENABLED: process.env.DISCOVERY_MOCK_SOURCE_ENABLED !== 'false',
@@ -30,13 +36,13 @@ const config = {
   PHASH_DISTANCE_THRESHOLD: parseInt(process.env.PHASH_DISTANCE_THRESHOLD || '5', 10),
   
   // Phase 4 - Discovery Database & Scheduler
-  DISCOVERY_DATABASE_URL: process.env.DISCOVERY_DATABASE_URL || process.env.DATABASE_URL,
+  DISCOVERY_DATABASE_URL: cleanEnv(process.env.DISCOVERY_DATABASE_URL || process.env.DATABASE_URL),
   DISCOVERY_SCHEDULER_ENABLED: process.env.DISCOVERY_SCHEDULER_ENABLED !== 'false', // Default true
   DISCOVERY_SCHEDULE_CRON: process.env.DISCOVERY_SCHEDULE_CRON || '0 * * * *', // Default hourly
 
   // Apify & Reddit Actor Config
   DISCOVERY_APIFY_REDDIT_ENABLED: process.env.DISCOVERY_APIFY_REDDIT_ENABLED === 'true',
-  APIFY_API_TOKEN: process.env.APIFY_API_TOKEN || '',
+  APIFY_API_TOKEN: cleanEnv(process.env.APIFY_API_TOKEN, ''),
   APIFY_REDDIT_ACTOR: process.env.APIFY_REDDIT_ACTOR || 'harshmaur~reddit-scraper',
   
   // --- TREND ENGINE & FILTERING ---
