@@ -7,10 +7,31 @@ export default function NewMemes({ user, requireAuth }) {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [isIngesting, setIsIngesting] = useState(false);
 
   useEffect(() => {
-    const timer = setInterval(() => setCurrentTime(new Date()), 30000);
-    return () => clearInterval(timer);
+    const fetchStatus = async () => {
+      try {
+        const rawApiUrl = import.meta.env.VITE_API_URL || '';
+        const apiUrl = rawApiUrl.replace(/\/+$/, '');
+        const res = await fetch(`${apiUrl}/api/ingestion/status`);
+        if (res.ok) {
+          const data = await res.json();
+          setIsIngesting(data.isIngesting);
+        }
+      } catch (e) {
+        // ignore
+      }
+    };
+    
+    fetchStatus();
+    const timerTime = setInterval(() => setCurrentTime(new Date()), 30000);
+    const timerStatus = setInterval(fetchStatus, 3000);
+    
+    return () => {
+      clearInterval(timerTime);
+      clearInterval(timerStatus);
+    };
   }, []);
 
   useEffect(() => {
@@ -64,8 +85,19 @@ export default function NewMemes({ user, requireAuth }) {
         </div>
         
         <div className="flex gap-4 font-mono text-[0.6rem] justify-center md:justify-end w-full md:w-auto">
-          <div className="px-4 py-2 bg-[#111116] border border-[#22222f] text-[#8a8a98]">
-            STATUS: <span className="text-[#ff4a1c]">INGESTION_SYNCED</span>
+          <div className="px-4 py-2 bg-[#111116] border border-[#22222f] text-[#8a8a98] flex items-center gap-2">
+            STATUS: 
+            {isIngesting ? (
+              <span className="flex items-center gap-2 text-[#ff4a1c] uppercase">
+                <span className="w-2 h-2 bg-[#ff4a1c] rounded-full animate-pulse"></span>
+                INGESTING
+              </span>
+            ) : (
+              <span className="flex items-center gap-2 text-[#10b981] uppercase">
+                <span className="w-2 h-2 bg-[#10b981] rounded-full"></span>
+                COMPLETED
+              </span>
+            )}
           </div>
           <div className="px-4 py-2 bg-[#111116] border border-[#22222f] text-[#8a8a98]">
             NEW UNITS: <span className="text-[#f4f4f5]">{memes.length}</span>
@@ -95,15 +127,15 @@ export default function NewMemes({ user, requireAuth }) {
                 <div className="absolute top-0 right-0 w-12 h-[1px] bg-[#ff4a1c]/50"></div>
                 <div className="absolute bottom-6 right-0 w-[1px] h-12 bg-[#ff4a1c]/50"></div>
 
-                {/* Image Container */}
-                <div className="relative aspect-[4/3] overflow-hidden mb-4 bg-[#070709]">
+                {/* Consistent Image Container with Contain Fit */}
+                <div className="relative h-60 w-full overflow-hidden mb-4 bg-[#070709] border border-[#22222f]/50 flex items-center justify-center p-2 rounded-sm group-hover:border-[#ff4a1c]/40 transition-colors">
                   <img 
                     src={meme.url} 
                     alt={meme.title} 
                     loading="lazy"
-                    className="w-full h-full object-cover grayscale transition-all duration-700 group-hover:grayscale-0 group-hover:scale-110" 
+                    className="max-h-full max-w-full object-contain transition-all duration-300 group-hover:scale-[1.03]" 
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#070709] to-transparent opacity-60 group-hover:opacity-20 transition-opacity"></div>
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#070709]/50 via-transparent to-transparent pointer-events-none"></div>
                 </div>
 
                 {/* Content */}

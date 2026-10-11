@@ -10,7 +10,7 @@ export default function MemeResult({ user, requireAuth, onSearch }) {
   const location = useLocation();
   const navigate = useNavigate();
   const initialQuery = new URLSearchParams(location.search).get('q') || 'ALL_UNITS';
-  const [searchInputValue, setSearchInputValue] = useState(initialQuery);
+  const [searchInputValue, setSearchInputValue] = useState(initialQuery === 'ALL_UNITS' ? '' : initialQuery);
   const query = initialQuery;
   const [currentTime, setCurrentTime] = useState(new Date());
 
@@ -20,35 +20,22 @@ export default function MemeResult({ user, requireAuth, onSearch }) {
   }, []);
 
   useEffect(() => {
-    setSearchInputValue(initialQuery);
+    setSearchInputValue(initialQuery === 'ALL_UNITS' ? '' : initialQuery);
   }, [initialQuery]);
 
   const handleLocalSearch = (e) => {
     e.preventDefault();
-    if (!searchInputValue.trim()) return;
+    const trimmed = searchInputValue.trim();
+    if (!trimmed) return;
     
-    if (!user) {
-      localStorage.setItem('pending_search_query', searchInputValue);
-      requireAuth('Authentication Required to Search', () => {
-        if (onSearch) onSearch(searchInputValue);
-        navigate(`/results?q=${encodeURIComponent(searchInputValue)}`);
-        localStorage.removeItem('pending_search_query');
-      });
-      return;
-    }
-
-    if (onSearch) onSearch(searchInputValue);
-    localStorage.removeItem('pending_search_query');
-    navigate(`/results?q=${encodeURIComponent(searchInputValue)}`);
+    if (onSearch) onSearch(trimmed);
+    navigate(`/results?q=${encodeURIComponent(trimmed)}`);
   };
 
   useEffect(() => {
-
-
     const fetchMemes = async () => {
       setLoading(true);
       try {
-        // Automatically remove any accidental trailing slashes from the environment variable
         const rawApiUrl = import.meta.env.VITE_API_URL || '';
         const apiUrl = rawApiUrl.replace(/\/+$/, '');
         
@@ -56,8 +43,8 @@ export default function MemeResult({ user, requireAuth, onSearch }) {
         if (!res.ok) throw new Error('Failed to fetch memes');
         const data = await res.json();
         
-        const formattedMemes = data.map(m => ({
-          id: m.b2_key,
+        const formattedMemes = data.map((m, idx) => ({
+          id: m.b2_key || m.id || `meme-${idx}`,
           title: m.caption || m.b2_key,
           caption: m.caption || '',
           ocr_text: m.ocr_text || '',
@@ -78,9 +65,9 @@ export default function MemeResult({ user, requireAuth, onSearch }) {
     };
 
     fetchMemes();
-  }, [query, activeFilter, user, navigate]);
+  }, [query, activeFilter]);
 
-  const filteredMemes = memes; // Filtering is now handled by the backend
+  const filteredMemes = memes;
 
   return (
     <div className="pt-32 pb-20 min-h-screen relative z-10">
@@ -102,13 +89,10 @@ export default function MemeResult({ user, requireAuth, onSearch }) {
               <iconify-icon icon="solar:minimalistic-magnifer-linear" width="20" className="text-[#8a8a98] ml-4 group-focus-within:text-[#ff4a1c]"></iconify-icon>
               <input 
                 type="text" 
-                placeholder="UPDATE_QUERY..." 
+                placeholder="Search memes, vibes, topics..." 
                 value={searchInputValue}
-                onChange={(e) => {
-                  setSearchInputValue(e.target.value);
-                  if (!user) localStorage.setItem('pending_search_query', e.target.value);
-                }}
-                className="w-full bg-transparent px-4 py-3 text-sm font-mono text-[#f4f4f5] placeholder:text-[#22222f] focus:outline-none focus:ring-0" 
+                onChange={(e) => setSearchInputValue(e.target.value)}
+                className="w-full bg-transparent px-4 py-3 text-sm font-mono text-[#f4f4f5] placeholder:text-[#52525f] focus:outline-none focus:ring-0" 
               />
             </div>
             <button type="submit" className="btn-cyber w-full sm:w-auto h-[3.25rem] px-6 text-xs font-bold text-white uppercase tracking-wider sm:-ml-4 flex items-center justify-center">
@@ -138,40 +122,56 @@ export default function MemeResult({ user, requireAuth, onSearch }) {
             <div className="w-12 h-12 border-2 border-[#ff4a1c] border-t-transparent rounded-full animate-spin"></div>
             <span className="font-mono text-xs text-[#ff4a1c] animate-pulse uppercase">loading_memes...</span>
           </div>
+        ) : filteredMemes.length === 0 ? (
+          <div className="py-20 flex flex-col items-center justify-center text-center reveal active">
+            <div className="w-16 h-16 border border-[#22222f] bg-[#111116] flex items-center justify-center mb-6 text-[#ff4a1c]">
+              <iconify-icon icon="solar:minimalistic-magnifer-linear" width="32"></iconify-icon>
+            </div>
+            <h3 className="font-display font-[800] text-2xl text-[#f4f4f5] uppercase mb-2">No Memes Located</h3>
+            <p className="font-mono text-xs text-[#8a8a98] max-w-md mb-6">
+              Query <span className="text-[#ff4a1c]">"{query}"</span> returned 0 units. Try searching by mood, vibe, or different keywords.
+            </p>
+            <button 
+              onClick={() => navigate('/results?q=ALL_UNITS')}
+              className="btn-cyber-ghost px-6 py-2.5 text-xs font-mono uppercase tracking-wider text-[#8a8a98] hover:text-[#ff4a1c]"
+            >
+              Reset to All Units
+            </button>
+          </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-6">
             {filteredMemes.map((meme, i) => (
               <div 
-                key={meme.id} 
-                className="group relative bg-[#111116]/40 backdrop-blur-md border border-[#22222f] p-3 reveal active flex flex-col transition-all duration-500 hover:border-[#ff4a1c]/50 hover:shadow-[0_0_40px_rgba(255,74,28,0.15)] hover:-translate-y-1"
+                key={`${meme.id}-${i}`} 
+                className="group relative bg-[#111116]/60 backdrop-blur-md border border-[#22222f] p-4 flex flex-col transition-all duration-300 hover:border-[#ff4a1c]/60 hover:shadow-[0_0_30px_rgba(255,74,28,0.15)] hover:-translate-y-1 rounded-sm"
                 style={{ 
-                  clipPath: 'polygon(0 0, 100% 0, 100% calc(100% - 1.5rem), calc(100% - 1.5rem) 100%, 0 100%)', 
-                  transitionDelay: `${i * 100}ms`,
-                  willChange: 'transform, opacity'
+                  clipPath: 'polygon(0 0, 100% 0, 100% calc(100% - 1.25rem), calc(100% - 1.25rem) 100%, 0 100%)'
                 }}
               >
-                {/* Visual Accent */}
+                {/* Visual Accents */}
                 <div className="absolute top-0 right-0 w-12 h-[1px] bg-[#ff4a1c]/50"></div>
                 <div className="absolute bottom-6 right-0 w-[1px] h-12 bg-[#ff4a1c]/50"></div>
 
-                {/* Image Container */}
-                <div className="relative aspect-[4/3] overflow-hidden mb-4 bg-[#070709]">
+                {/* Consistent Image Container with Contain Fit */}
+                <div className="relative h-60 w-full overflow-hidden mb-4 bg-[#070709] border border-[#22222f]/50 flex items-center justify-center p-2 rounded-sm group-hover:border-[#ff4a1c]/40 transition-colors">
                   <img 
                     src={meme.url} 
                     alt={meme.title} 
                     loading="lazy"
-                    className="w-full h-full object-cover grayscale transition-all duration-700 group-hover:grayscale-0 group-hover:scale-110" 
+                    className="max-h-full max-w-full object-contain transition-all duration-300 group-hover:scale-[1.03]" 
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#070709] to-transparent opacity-60 group-hover:opacity-20 transition-opacity"></div>
-                  
-
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#070709]/50 via-transparent to-transparent pointer-events-none"></div>
                 </div>
 
                 {/* Content */}
-                <div className="flex flex-col gap-3 flex-1 px-2 pb-2">
+                <div className="flex flex-col gap-3 flex-1 px-1 pb-1">
+                  {meme.caption && (
+                    <p className="font-mono text-xs text-[#c0c0d0] line-clamp-2 leading-relaxed">
+                      {meme.caption}
+                    </p>
+                  )}
 
-                  
-                  <div className="flex flex-wrap gap-2 mt-auto">
+                  <div className="flex flex-wrap gap-2 mt-auto pt-2">
                     {meme.result_type === 'ingestion' && (
                       <span className="font-mono text-[0.55rem] text-[#ff4a1c] bg-[#070709] border border-[#ff4a1c]/50 px-2 py-0.5 shadow-[0_0_10px_rgba(255,74,28,0.2)]">
                         DISCOVERED
@@ -184,7 +184,7 @@ export default function MemeResult({ user, requireAuth, onSearch }) {
                     ))}
                   </div>
 
-                  <div className="mt-4 flex flex-col gap-2">
+                  <div className="mt-3 flex flex-col gap-2">
                     {meme.ingested_at && (
                       <div className="font-mono text-[0.55rem] text-[#8a8a98] text-center group-hover:text-[#c0c0d0] transition-colors duration-300">
                         {formatRelativeTime(meme.ingested_at, currentTime)}
@@ -200,7 +200,7 @@ export default function MemeResult({ user, requireAuth, onSearch }) {
                           navigate('/preview', { state: { meme } });
                         }
                       }}
-                      className="btn-cyber w-full py-3 text-[0.65rem] font-bold uppercase tracking-widest opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0 transition-all duration-300">
+                      className="btn-cyber w-full py-2.5 text-[0.65rem] font-bold uppercase tracking-widest opacity-0 group-hover:opacity-100 translate-y-1 group-hover:translate-y-0 transition-all duration-300">
                       View Meme
                     </button>
                   </div>

@@ -44,7 +44,10 @@ const config = {
   DISCOVERY_MIN_ACCEPTANCE_RATE: parseFloat(process.env.DISCOVERY_MIN_ACCEPTANCE_RATE || '0.70'),
   DISCOVERY_TARGET_ACCEPTANCE_RATE: parseFloat(process.env.DISCOVERY_TARGET_ACCEPTANCE_RATE || '0.80'),
   DISCOVERY_REDDIT_MAX_AGE_HOURS: parseFloat(process.env.DISCOVERY_REDDIT_MAX_AGE_HOURS || '48'),
-  DISCOVERY_REDDIT_COLLECTION_LIMIT: parseInt(process.env.DISCOVERY_REDDIT_COLLECTION_LIMIT || '300', 10),
+  // Hard ceiling of 50 regardless of environment overrides or malformed inputs
+  DISCOVERY_REDDIT_COLLECTION_LIMIT: (isNaN(parseInt(process.env.DISCOVERY_REDDIT_COLLECTION_LIMIT, 10)) || parseInt(process.env.DISCOVERY_REDDIT_COLLECTION_LIMIT, 10) <= 0) ? 50 : Math.min(parseInt(process.env.DISCOVERY_REDDIT_COLLECTION_LIMIT, 10), 50),
+  DISCOVERY_SUBREDDITS: (process.env.DISCOVERY_SUBREDDITS || 'funnyIndia,DesiMemes,dankindianmemes,HindiMemes,IndianTeenagers').split(',').map(s => s.trim()),
+  DISCOVERY_SKIP_QUEUE: process.env.DISCOVERY_SKIP_QUEUE !== 'false', // Default isolation to true
 
   // Phase 2B - Dynamic Topic Discovery
   DISCOVERY_MAX_DYNAMIC_QUERIES_PER_RUN: parseInt(process.env.DISCOVERY_MAX_DYNAMIC_QUERIES_PER_RUN || '3', 10),

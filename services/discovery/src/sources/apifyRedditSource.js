@@ -33,11 +33,12 @@ export class ApifyRedditSourceAdapter extends SourceAdapter {
       queries.push(context.query);
     }
 
-    if (!queries || queries.length === 0) {
-      logger.info('ApifyRedditSource: No queries provided in context, skipping execution', {
-        discovery_run_id: discoveryRunId
-      });
-      return { status: 'SUCCESS_EMPTY', receivedCount: 0, candidates: [], reason: 'No queries provided' };
+    const useSubreddits = queries.length === 0;
+    const subreddits = config.DISCOVERY_SUBREDDITS || [];
+
+    if (useSubreddits && subreddits.length === 0) {
+      logger.info('ApifyRedditSource: No targets provided, skipping execution');
+      return { status: 'SUCCESS_EMPTY', receivedCount: 0, candidates: [], reason: 'No targets provided' };
     }
 
     // 1. Budget & Configuration Check
@@ -49,26 +50,35 @@ export class ApifyRedditSourceAdapter extends SourceAdapter {
 
     const client = this._getClient();
     const actorId = config.APIFY_REDDIT_ACTOR;
-
+    
     logger.info('ApifyRedditSource: Starting Apify Actor', {
       discovery_run_id: discoveryRunId,
       actor_id: actorId,
-      queries: queries
+      targets: useSubreddits ? subreddits : queries
     });
 
+    // Dynamically build payload
     const input = {
-      searchTerms: queries,
       type: "post",
-      sort: "top",
+      sort: useSubreddits ? "new" : "top",
       time: "week",
-      maxPostsCount: Math.ceil((config.DISCOVERY_REDDIT_COLLECTION_LIMIT || 100) / queries.length),
-      // Ensure we don't fetch unrelated content
-      searchPosts: true,
+      maxItems: config.DISCOVERY_REDDIT_COLLECTION_LIMIT || 50,
+      maxPostsCount: useSubreddits 
+          ? Math.ceil((config.DISCOVERY_REDDIT_COLLECTION_LIMIT || 50) / subreddits.length)
+          : Math.ceil((config.DISCOVERY_REDDIT_COLLECTION_LIMIT || 50) / queries.length),
+      searchPosts: !useSubreddits,
       searchComments: false,
       searchCommunities: false,
       searchUsers: false,
-      skipComments: true
+      skipComments: true,
+      aiAnalysis: false
     };
+
+    if (useSubreddits) {
+      input.startUrls = subreddits.map(s => ({ url: `https://www.reddit.com/r/${s.replace(/^r\//, '')}/new/` }));
+    } else {
+      input.searchTerms = queries;
+    }
 
     let runResult;
     try {

@@ -2,7 +2,7 @@ name: Run Meme Discovery
 
 on:
   schedule:
-    - cron: '0 */6 * * *' # Runs every 6 hours
+    - cron: '30 3,15 * * *' # 9:00 AM IST (03:30 UTC) and 9:00 PM IST (15:30 UTC)
   workflow_dispatch: # Allows manual trigger from GitHub UI
 
 jobs:
@@ -33,5 +33,7 @@ jobs:
           APIFY_REDDIT_ACTOR: "harshmaur~reddit-scraper"
           DISCOVERY_DATABASE_URL: ${{ secrets.DISCOVERY_DATABASE_URL }}
           DISCOVERY_MIN_ACCEPTANCE_RATE: 0.70
-          DISCOVERY_REDDIT_COLLECTION_LIMIT: 300
+          DISCOVERY_REDDIT_COLLECTION_LIMIT: 50
+          DISCOVERY_SUBREDDITS: "funnyIndia,DesiMemes,dankindianmemes,HindiMemes,IndianTeenagers"
+          DISCOVERY_SKIP_QUEUE: "false"
           DISCOVERY_MAX_DYNAMIC_QUERIES_PER_RUN: 3

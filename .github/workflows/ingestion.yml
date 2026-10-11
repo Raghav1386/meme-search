@@ -1,0 +1,55 @@
+name: Run Meme Ingestion
+
+on:
+  schedule:
+    # Runs every 4 hours offset by 15 mins (IST: 12:15 AM, 4:15 AM, 8:15 AM, 12:15 PM, 4:15 PM, 8:15 PM)
+    # UTC calculation (UTC = IST - 5:30):
+    #   00:15 IST -> 18:45 UTC (previous day)
+    #   04:15 IST -> 22:45 UTC (previous day)
+    #   08:15 IST -> 02:45 UTC
+    #   12:15 IST -> 06:45 UTC
+    #   16:15 IST -> 10:45 UTC
+    #   20:15 IST -> 14:45 UTC
+    - cron: '45 2,6,10,14,18,22 * * *'
+  workflow_dispatch: # Allows manual trigger from GitHub UI
+
+# Prevent concurrent ingestion runs on the same queue
+concurrency:
+  group: meme-ingestion-queue
+  cancel-in-progress: false
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install Dependencies
+        working-directory: ./services/ingestion
+        run: npm install
+
+      - name: Run Ingestion Worker
+        working-directory: ./services/ingestion
+        run: node src/run-once.js
+        env:
+          PORT: 4001
+          LOG_LEVEL: info
+          REDIS_URL: ${{ secrets.REDIS_URL }}
+          INGESTION_QUEUE_NAME: "meme-ingestion"
+          INGESTION_WORKER_CONCURRENCY: 2
+          MEDIA_STORAGE_ENABLED: "true"
+          INGESTION_DATABASE_URL: ${{ secrets.INGESTION_DATABASE_URL || secrets.DATABASE_URL }}
+          INGESTION_B2_BUCKET: ${{ secrets.INGESTION_B2_BUCKET || secrets.B2_BUCKET_NAME }}
+          B2_KEY_ID: ${{ secrets.B2_KEY_ID }}
+          B2_APP_KEY: ${{ secrets.B2_APP_KEY }}
+          INGESTION_PYTHON_SERVICE_URL: ${{ secrets.INGESTION_PYTHON_SERVICE_URL || 'http://127.0.0.1:8001' }}
+          PYTHON_PROCESSOR_MODE: ${{ secrets.PYTHON_PROCESSOR_MODE || 'hf-ingestion' }}
+          INGESTION_REAL_PROCESSOR_URL: ${{ secrets.INGESTION_REAL_PROCESSOR_URL }}

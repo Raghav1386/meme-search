@@ -11,6 +11,23 @@ const pool = new pg.Pool({
   connectionString: process.env.INGESTION_DATABASE_URL,
 });
 
+router.get("/status", async (req, res) => {
+  try {
+    const query = `
+      SELECT COUNT(*) as active_count
+      FROM ingestion_candidates 
+      WHERE status NOT IN ('COMPLETED', 'FAILED')
+        AND updated_at > NOW() - INTERVAL '5 minutes'
+    `;
+    const result = await pool.query(query);
+    const activeCount = parseInt(result.rows[0].active_count, 10);
+    res.json({ isIngesting: activeCount > 0, activeCount });
+  } catch (err) {
+    console.error("Error fetching ingestion status:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.get("/memes", async (req, res) => {
   try {
     const limit = parseInt(req.query.limit) || 20;

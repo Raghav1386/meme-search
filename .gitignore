@@ -3,7 +3,12 @@
 # ==========================================
 .env
 .env.*
+*.env
+*.env.*
+**/.env
+**/.env.*
 !.env.example
+!**/.env.example
 backend/.env
 frontend/.env
 services/discovery/.env
@@ -12,7 +17,11 @@ services/ingestion/.env
 *.key
 *.cert
 *.cert.pem
+*.pfx
+*.p12
 secrets.json
+credentials.json
+token.json
 
 # ==========================================
 # 2. DEPENDENCIES
@@ -96,8 +105,28 @@ Thumbs.db
 # 8. SCRATCH & TEMPORARY FILES
 # ==========================================
 scratch/
+**/scratch/
 scratch_*.*
+services/**/scratch_*.*
+**/scratch_*.*
 allfiles.txt
 b2-ingestion-list.txt
 services/manual-reddit-collection/output/
-services/**/scratch_*.*
+
+# One-off / Temporary query & testing scripts
+backend/get_five.js
+backend/query_candidates.js
+services/discovery/fetch_dataset.js
+services/discovery/query_final.js
+services/discovery/query_script.js
+services/discovery/test-discovery.js
+services/discovery/test-*.js
+services/discovery/src/scripts/check_schema.js
+services/discovery/src/scripts/check_status.js
+services/discovery/src/scripts/requeue_skipped.js
+services/discovery/src/scripts/query_candidates.js
+services/discovery/src/scripts/enqueueFromJson.js
+services/discovery/src/scripts/enqueueProtestMemes.js
+services/discovery/src/scripts/protestMemeCollector.js
+
+
