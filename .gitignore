@@ -128,5 +128,6 @@ services/discovery/src/scripts/query_candidates.js
 services/discovery/src/scripts/enqueueFromJson.js
 services/discovery/src/scripts/enqueueProtestMemes.js
 services/discovery/src/scripts/protestMemeCollector.js
+services/ingestion/check_ingested_memes.js
 
 
