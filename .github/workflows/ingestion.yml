@@ -53,3 +53,12 @@ jobs:
           INGESTION_PYTHON_SERVICE_URL: ${{ secrets.INGESTION_PYTHON_SERVICE_URL || 'http://127.0.0.1:8001' }}
           PYTHON_PROCESSOR_MODE: ${{ secrets.PYTHON_PROCESSOR_MODE || 'hf-ingestion' }}
           INGESTION_REAL_PROCESSOR_URL: ${{ secrets.INGESTION_REAL_PROCESSOR_URL }}
+
+      - name: Show Ingestion Summary & Timestamps
+        if: always()
+        working-directory: ./services/ingestion
+        run: node check_ingested_memes.js
+        env:
+          REDIS_URL: ${{ secrets.REDIS_URL }}
+          INGESTION_DATABASE_URL: ${{ secrets.INGESTION_DATABASE_URL || secrets.DATABASE_URL }}
+
