@@ -331,7 +331,13 @@ export async function processCandidatesPipeline(rawCandidates, discoveryRunId, b
 
   // 5. QUEUING (Phase 3.4 boundary integration)
   for (const candidate of finalQueueCandidates) {
-    const enqueueResult = await enqueueCandidate(candidate, discoveryRunId);
+    let enqueueResult;
+    if (config.DISCOVERY_SKIP_QUEUE) {
+      logger.info('Queue isolated: skipping enqueueCandidate', { candidate_id: candidate.candidate_id });
+      enqueueResult = { status: 'skipped_by_isolation' };
+    } else {
+      enqueueResult = await enqueueCandidate(candidate, discoveryRunId);
+    }
     
     candidate.queue_status = enqueueResult.status;
     
@@ -400,6 +406,8 @@ export async function processCandidatesPipeline(rawCandidates, discoveryRunId, b
                dbStatus = 'queued';
             } else if (candidate.queue_status === 'existing') {
                dbStatus = 'already_queued';
+            } else if (candidate.queue_status === 'skipped_by_isolation') {
+               dbStatus = 'skipped_by_isolation';
             } else {
                dbStatus = 'queue_failed';
             }
@@ -486,19 +494,15 @@ export async function runDiscovery(providedRunId, options = {}) {
   let rawCandidates = [];
 
   try {
-    // Phase 2B: Dynamic Topic Discovery (Only if manual queries aren't provided)
     if (!options.query && (!options.queries || options.queries.length === 0)) {
-       logger.info('Discovery Run: Starting dynamic topic discovery', { discovery_run_id: discoveryRunId });
-       const topics = await extractAndScoreTopics();
-       const dynamicQueries = await generateSearchQueries(topics);
-       options.queries = dynamicQueries;
+       logger.info('Discovery Run: Using Subreddit-based discovery', { discovery_run_id: discoveryRunId });
     }
 
     rawCandidates = await executeSources(discoveryRunId, options);
     
-    // User requested hard limit of 300 memes per run (no 1k/2k extended runs)
-    if (rawCandidates.length > 300) {
-       rawCandidates = rawCandidates.slice(0, 300);
+    const limit = config.DISCOVERY_REDDIT_COLLECTION_LIMIT || 50;
+    if (rawCandidates.length > limit) {
+       rawCandidates = rawCandidates.slice(0, limit);
     }
 
     const metrics = rawCandidates._sourceMetrics || {};
